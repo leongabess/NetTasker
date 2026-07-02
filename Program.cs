@@ -211,6 +211,25 @@ app.MapGet("/todoitems", async (HttpContext httpContext, TodoDb db) =>
     return Results.Ok(todos);
 }).RequireAuthorization();
 
+app.MapDelete("/todoitems/{id}", async (int id, HttpContext httpContext, TodoDb db) =>
+{
+    var userIdClaim = httpContext.User.FindFirst("UserId")?.Value;
+    if (string.IsNullOrEmpty(userIdClaim))
+        return Results.Unauthorized();
+    int userId = int.Parse(userIdClaim);
+
+    var todo = await db.Todos.FindAsync(id);
+    if (todo is null) return Results.NotFound();
+
+    if (todo.UserId != userId)
+    {
+        return Results.Forbid();  // 403 - Forbidden
+    }
+    db.Todos.Remove(todo);
+    await db.SaveChangesAsync();
+    return Results.NoContent();
+}).RequireAuthorization();
+
 app.MapPut("/users/{id}", async (int id, User inputUser, UserDb db) =>
 {
     var user = await db.Users.FindAsync(id);
