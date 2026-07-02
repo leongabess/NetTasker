@@ -65,6 +65,7 @@ app.UseAuthorization();
 
 if (app.Environment.IsDevelopment())
 {
+    builder.Configuration.AddUserSecrets<Program>();
     app.UseOpenApi();
     app.UseSwaggerUi(config =>
     {

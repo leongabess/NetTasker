@@ -16,6 +16,25 @@
 # Mono auto generated files
 mono_crash.*
 
+# App Settings
+appsettings.Development.json
+appsettings.Staging.json
+appsettings.Production.json
+appsettings.*.local.json
+*.local.json
+
+# Environment variables
+.env
+*.env
+*.env.local
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+*.mdf
+*.ldf
+
 # Build results
 [Dd]ebug/
 [Dd]ebugPublic/
