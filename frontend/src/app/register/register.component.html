@@ -1,0 +1,58 @@
+<div class="register-container">
+
+  <div class="Welcoming">
+    <h2>Bem-vindo!</h2>
+    <p>Utilize a plataforma para criação de seu usuário e senha. 
+        Após isso, basta criar e acompanhar suas atividades do dia-a-dia. <br>
+        Aproveite para monitorar suas atividades e se planejar melhor.
+    </p>
+</div>
+  <div class="register-card">
+    <h2>Registrar-se</h2>
+    <p class="subtitle">Crie sua conta</p>
+
+    <div *ngIf="registrationSuccess" class="alert alert-success">
+      Registro realizado com sucesso!
+    </div>
+
+    <form [formGroup]="registerForm" (ngSubmit)="onSubmit()">
+      <div class="form-group">
+        <label for="login">Login</label>
+        <input 
+          type="text" 
+          id="login" 
+          formControlName="login" 
+          class="form-control"
+          [class.is-invalid]="submitted && f['login'].errors"
+          placeholder="Digite seu login"
+        >
+        <div *ngIf="submitted && f['login'].errors" class="invalid-feedback">
+          <div *ngIf="f['login'].errors['required']">Login é obrigatório</div>
+          <div *ngIf="f['login'].errors['minlength']">Login deve ter pelo menos 3 caracteres</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="password">Senha</label>
+        <input 
+          type="password" 
+          id="password" 
+          formControlName="password" 
+          class="form-control"
+          [class.is-invalid]="submitted && f['password'].errors"
+          placeholder="Digite sua senha"
+        >
+        <div *ngIf="submitted && f['password'].errors" class="invalid-feedback">
+          <div *ngIf="f['password'].errors['required']">Senha é obrigatória</div>
+          <div *ngIf="f['password'].errors['minlength']">Senha deve ter pelo menos 6 caracteres</div>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-register">Registrar</button>
+    </form>
+
+    <div class="register-link">
+      Já tem uma conta? <a routerLink="login">Faça login</a>
+    </div>
+  </div>
+</div>
