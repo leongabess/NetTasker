@@ -17,18 +17,31 @@
 
     <form [formGroup]="registerForm" (ngSubmit)="onSubmit()">
       <div class="form-group">
-        <label for="login">Login</label>
-        <input 
-          type="text" 
-          id="login" 
-          formControlName="login" 
-          class="form-control"
-          [class.is-invalid]="submitted && f['login'].errors"
-          placeholder="Digite seu login"
-        >
-        <div *ngIf="submitted && f['login'].errors" class="invalid-feedback">
-          <div *ngIf="f['login'].errors['required']">Login é obrigatório</div>
-          <div *ngIf="f['login'].errors['minlength']">Login deve ter pelo menos 3 caracteres</div>
+
+        <div class="form-group">
+          <label for="name">Nome</label>
+          <input type="text"
+                 id="name"
+                 formControlName="name"
+                 class="form-control"
+                 [class.is-invalid]="submitted && f['name'].errors"
+                 placeholder="Digite seu nome"
+                 [disabled]="isLoading">
+          <div *ngIf="submitted && f['name'].errors" class="invalid-feedback">
+            <div *ngIf="f['name'].errors['required']">Nome é obrigatório</div>
+          </div>
+        </div>
+
+        <label for="userName">Nome de usuário</label>
+        <input type="text"
+               id="userName"
+               formControlName="userName"
+               class="form-control"
+               [class.is-invalid]="submitted && f['userName'].errors"
+               placeholder="Digite seu nome de usuário">
+        <div *ngIf="submitted && f['username'].errors" class="invalid-feedback">
+          <div *ngIf="f['username'].errors['required']">Nome de usuário é obrigatório</div>
+          <div *ngIf="f['username'].errors['minlength']">nome de usuário deve ter pelo menos 3 caracteres</div>
         </div>
       </div>
 
@@ -48,7 +61,9 @@
         </div>
       </div>
 
-      <button type="submit" class="btn-register">Registrar</button>
+      <button type="submit" class="btn-register" [disabled]="isLoading"><span></span>
+      {{ isLoading ? 'Registrando...': 'Registrar'}}
+      </button>
     </form>
 
     <div class="register-link">

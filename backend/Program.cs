@@ -13,6 +13,18 @@ bool useInMemory = builder.Configuration.GetValue<bool>("UseInMemoryDatabase");
 string connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Connection string not found.");
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAngular",
+        policy =>
+        {
+            policy.WithOrigins("http://localhost:4200") 
+                  .AllowAnyMethod()
+                  .AllowAnyHeader()
+                  .AllowCredentials();
+        });
+});
+
 builder.Services.AddDbContext<UserDb>(options =>
 {
     if (useInMemory)
@@ -59,7 +71,11 @@ builder.Services.AddOpenApiDocument(config =>
     config.Version = "V1";
 
 });
+
 var app = builder.Build();
+
+
+app.UseCors("AllowAngular");
 app.UseAuthentication();
 app.UseAuthorization();
 

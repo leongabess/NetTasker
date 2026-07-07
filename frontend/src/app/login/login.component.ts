@@ -1,7 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from "@angular/router";
+import { RouterLink, Router } from "@angular/router";
+import { AuthService } from "../services/auth.services";
 
 @Component({
   selector: 'app-login',
@@ -10,14 +11,16 @@ import { RouterLink } from "@angular/router";
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.css']
 })
-export class LoginComponent {
+export class LoginComponent implements OnInit{
   loginForm: FormGroup;
   submitted = false;
   loginSuccess = false;
+  errorMessage = '';
+  isLoading = false;
 
-  constructor(private formBuilder: FormBuilder) {
+  constructor(private formBuilder: FormBuilder, private authService: AuthService, private router: Router) {
     this.loginForm = this.formBuilder.group({
-      login: ['', [Validators.required, Validators.minLength(3)]],
+      userName: ['', [Validators.required, Validators.minLength(3)]],
       password: ['', [Validators.required, Validators.minLength(6)]]
     });
   }
@@ -26,20 +29,46 @@ export class LoginComponent {
     return this.loginForm.controls; 
   }
 
+  ngOnInit(): void {
+    if (this.authService.isLoggedIn()) {
+      this.router.navigate(['/home']);
+    }
+  }
+
   onSubmit() {
     this.submitted = true;
+    this.errorMessage = '';
+    this.loginSuccess = false;
 
     if (this.loginForm.invalid) {
       return;
     }
 
-    console.log('Dados do registro:', this.loginForm.value);
-    this.loginSuccess = true;
-    
-    setTimeout(() => {
-      this.loginSuccess = false;
-      this.loginForm.reset();
-      this.submitted = false;
-    }, 3000);
+    this.isLoading = true;
+
+
+    this.authService.login(this.loginForm.value).subscribe({
+      next: (response) => {
+        console.log('Login feito', response);
+        this.isLoading = false;
+        this.loginSuccess = true;
+
+        setTimeout(() => {
+          this.router.navigate(['/home']);
+        }, 1000);
+      },
+      error: (error) => {
+        console.error('Erro no login:', error);
+        this.isLoading = false;
+
+        if (error.status === 401) {
+          this.errorMessage = 'Login ou senha incorretos';
+        } else if (error.status === 404) {
+          this.errorMessage = 'Usuário não encontrado';
+        } else {
+          this.errorMessage = 'Erro ao fazer login. Tente novamente.';
+        }
+      }
+    });
   }
 }
