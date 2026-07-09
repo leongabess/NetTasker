@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef} from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { RouterLink, Router } from "@angular/router";
@@ -16,9 +16,10 @@ export class LoginComponent implements OnInit{
   submitted = false;
   loginSuccess = false;
   errorMessage = '';
+  showError = false;
   isLoading = false;
 
-  constructor(private formBuilder: FormBuilder, private authService: AuthService, private router: Router) {
+  constructor(private formBuilder: FormBuilder, private authService: AuthService, private router: Router, private cdr: ChangeDetectorRef) {
     this.loginForm = this.formBuilder.group({
       userName: ['', [Validators.required, Validators.minLength(3)]],
       password: ['', [Validators.required, Validators.minLength(6)]]
@@ -39,12 +40,16 @@ export class LoginComponent implements OnInit{
     this.submitted = true;
     this.errorMessage = '';
     this.loginSuccess = false;
+    this.showError = false;
 
     if (this.loginForm.invalid) {
+      this.loginForm.markAllAsTouched();
       return;
     }
 
+
     this.isLoading = true;
+    this.cdr.detectChanges(); 
 
 
     this.authService.login(this.loginForm.value).subscribe({
@@ -52,22 +57,25 @@ export class LoginComponent implements OnInit{
         console.log('Login feito', response);
         this.isLoading = false;
         this.loginSuccess = true;
+        this.errorMessage = '';
+        this.cdr.detectChanges();
 
         setTimeout(() => {
           this.router.navigate(['/home']);
         }, 1000);
       },
       error: (error) => {
-        console.error('Erro no login:', error);
         this.isLoading = false;
+        this.loginSuccess = false;
 
-        if (error.status === 401) {
-          this.errorMessage = 'Login ou senha incorretos';
-        } else if (error.status === 404) {
-          this.errorMessage = 'Usuário não encontrado';
-        } else {
-          this.errorMessage = 'Erro ao fazer login. Tente novamente.';
-        }
+        this.errorMessage = error.message || 'Problem trying to log in';
+        this.showError = true;
+        this.cdr.detectChanges();
+
+        setTimeout(() => {
+          this.showError = false;
+          this.cdr.detectChanges();
+        }, 5000);
       }
     });
   }

@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable } from 'rxjs';
-import { tap } from 'rxjs/operators';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { BehaviorSubject, Observable, throwError } from 'rxjs';
+import { catchError, tap } from 'rxjs/operators';
 import { Router } from '@angular/router';
 
 @Injectable({
@@ -37,8 +37,48 @@ export class AuthService {
           localStorage.setItem('user_data', JSON.stringify(response.user || { userName: credentials.userName }));
           this.loggedInSubject.next(true);
         }
-      })
+      }), catchError(this.handleError)
     );
+  }
+
+  private handleError(error: HttpErrorResponse): Observable<never> {
+    let errorMessage = 'Problem with login.';
+    console.log('Error status:', error.status);
+    console.log('Error:', error.error);
+
+    //returns error messages from the backend
+    if (error.error) {
+      if (typeof error.error === 'string') {
+        errorMessage = error.error;
+      }
+
+      else if (error.error.message) {
+        errorMessage = error.error.message;
+      }
+
+      else if (error.error.msg) {
+        errorMessage = error.error.msg;
+      }
+    }
+
+    //fallback in case of no messages
+    if (error.status === 401) {
+      errorMessage = error.error?.message || 'Usuário ou senha inválidos';
+    } else if (error.status === 400) {
+      errorMessage = error.error?.message || 'Dados inválidos. Verifique e tente novamente.';
+    } else if (error.status === 0) {
+      errorMessage = 'Erro de conexão. Verifique sua internet.';
+    } else if (error.error?.message) {
+      errorMessage = error.error.message;
+    }
+
+    console.log('Error message: ', errorMessage);
+    console.error('Erro no login:', error);
+    return throwError(() => ({
+      message: errorMessage,
+      status: error.status,
+      error: error.error
+    }));
   }
 
   logout(): void {

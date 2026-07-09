@@ -126,26 +126,45 @@ app.MapPost("/users/register", async (UserRegisterDto dto, UserDb db) =>
 
 app.MapPost("/users/login", async  (UserLoginDto dto, UserDb db) =>
 {
-    //Checks if the username is on the database and checks if the password matches
-    var user = await db.Users.FirstOrDefaultAsync(u => u.UserName == dto.Username);
-    if (user == null)
-        return Results.Unauthorized();
-    bool passwordMatch = BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash);
-    if (!passwordMatch)
-        return Results.Unauthorized();
-
-    //Creates the token and creates a new session for the user
-    var tokenHandler = new JwtSecurityTokenHandler();
-    var key = Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:Secret"]!);
-    var tokenDescriptor = new SecurityTokenDescriptor
+    try
     {
-        Subject = new ClaimsIdentity(new[] { new Claim(ClaimTypes.Name, user.UserName), new Claim("UserId", user.Id.ToString())}),
-        Expires = DateTime.UtcNow.AddHours(1),
-        SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
-    };    
-    var token = tokenHandler.CreateToken(tokenDescriptor);
-    return Results.Ok(new { msg = "Logged in.", Token = tokenHandler.WriteToken(token)});
-    
+        //Checks if the username is on the database and checks if the password matches
+        var user = await db.Users.FirstOrDefaultAsync(u => u.UserName == dto.Username);
+        if (user == null)
+        {
+            return Results.Json(
+                new { message = "Wrong user or password" },
+                statusCode: 401);
+        }
+
+        bool passwordMatch = BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash);
+        if (!passwordMatch)
+        {
+            return Results.Json(
+                new { message = "Wrong user or password" },
+                statusCode: 401);
+        }
+
+        //Creates the token and creates a new session for the user
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var key = Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:Secret"]!);
+        var tokenDescriptor = new SecurityTokenDescriptor
+        {
+            Subject = new ClaimsIdentity(new[] { new Claim(ClaimTypes.Name, user.UserName), new Claim("UserId", user.Id.ToString()) }),
+            Expires = DateTime.UtcNow.AddHours(1),
+            SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+        };
+        var token = tokenHandler.CreateToken(tokenDescriptor);
+        return Results.Ok(new { success = true, msg = "Logged in.", Token = tokenHandler.WriteToken(token) });
+    }
+    catch (Exception ex)
+    {
+        return Results.Json(new
+        {
+            message = "Problem trying to log in",
+            error = ex.Message
+        }, statusCode: 500);
+    }
 });
 
 app.MapPost("/todoitems", async (TodoDto dto, HttpContext httpContext, TodoDb db) =>

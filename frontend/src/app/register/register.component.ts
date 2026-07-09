@@ -29,6 +29,11 @@ export class RegisterComponent {
     return this.registerForm.controls; 
   }
 
+  ngOnInit(): void {
+    if (this.authService.isLoggedIn()) {
+      this.router.navigate(['/home']);
+    }
+  }
 
   onSubmit() {
     this.submitted = true;
@@ -71,14 +76,5 @@ export class RegisterComponent {
         }
       }
     });
-
-   /*console.log('Dados do registro:', this.registerForm.value);
-    this.registrationSuccess = true;
-    
-    setTimeout(() => {
-      this.registrationSuccess = false;
-      this.registerForm.reset();
-      this.submitted = false;
-    }, 3000); */
   } 
 }

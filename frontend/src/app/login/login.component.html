@@ -11,12 +11,13 @@
     <h2>Login</h2>
     <p class="subtitle">Entre com sua conta</p>
 
-    <div *ngIf="loginSuccess" class="alert alert-success">
-      Login realizado com sucesso!
+    <div *ngIf="showError && errorMessage" class="alert alert-danger" role="alert">
+      <i class="fas fa-exclamation-circle"></i>
+      <span>{{ errorMessage }}</span>
     </div>
 
-    <div *ngIf="errorMessage" class="alert alert-danger">
-      {{ errorMessage }}
+    <div *ngIf="loginSuccess" class="alert alert-success">
+      Login realizado com sucesso!
     </div>
 
     <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
