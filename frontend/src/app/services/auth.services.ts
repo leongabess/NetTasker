@@ -25,15 +25,18 @@ export class AuthService {
   }
 
   register(credentials: { userName: string, password: string, name?: string }): Observable<any> {
-    return this.http.post(`${this.apiUrl}/register`, credentials);
+    return this.http.post(`${this.apiUrl}/register`, credentials).pipe(
+      catchError(this.handleError)
+    );
   }
 
   login(credentials: {userName: string, password: string}): Observable<any> {
     return this.http.post(`${this.apiUrl}/login`, credentials).pipe(
       tap((response: any) => {
-        if (response.token) {
+        const token = response.token || response.Token;
+        if (token) {
           //Saves token
-          localStorage.setItem('auth_token', response.token);
+          localStorage.setItem('auth_token', token);
           localStorage.setItem('user_data', JSON.stringify(response.user || { userName: credentials.userName }));
           this.loggedInSubject.next(true);
         }
@@ -65,7 +68,7 @@ export class AuthService {
     if (error.status === 401) {
       errorMessage = error.error?.message || 'Usuário ou senha inválidos';
     } else if (error.status === 400) {
-      errorMessage = error.error?.message || 'Dados inválidos. Verifique e tente novamente.';
+      errorMessage = error.error?.message || 'Usuário já existe, utilize outro nome de usuário';
     } else if (error.status === 0) {
       errorMessage = 'Erro de conexão. Verifique sua internet.';
     } else if (error.error?.message) {

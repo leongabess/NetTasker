@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { RouterLink, Router } from "@angular/router";
@@ -16,8 +16,9 @@ export class RegisterComponent {
   submitted = false;
   registrationSuccess = false;
   errorMessage = '';
+  showError = false;
   isLoading = false;
-  constructor(private formBuilder: FormBuilder, private authService: AuthService, private router: Router) {
+  constructor(private formBuilder: FormBuilder, private authService: AuthService, private router: Router, private cdr: ChangeDetectorRef) {
     this.registerForm = this.formBuilder.group({
       name: ['', [Validators.required]],
       userName: ['', [Validators.required, Validators.minLength(3)]],
@@ -39,25 +40,28 @@ export class RegisterComponent {
     this.submitted = true;
     this.errorMessage = '';
     this.registrationSuccess = false;
+    this.showError = false;
 
     if (this.registerForm.invalid) {
-      console.log('Inválido.');
+      this.registerForm.markAllAsTouched();
       return;
     }
 
     this.isLoading = true;
+    this.cdr.detectChanges();
 
     const registerData = {
-      userName: this.registerForm.get('login')?.value,
+      userName: this.registerForm.get('userName')?.value,
       password: this.registerForm.get('password')?.value,
-      name: this.registerForm.get('name')?.value || this.registerForm.get('login')?.value
+      name: this.registerForm.get('name')?.value || this.registerForm.get('userName')?.value
     };
 
-    this.authService.register(this.registerForm.value).subscribe({
+    this.authService.register(registerData).subscribe({
       next: (response) => {
         console.log('Registro realizado', response);
         this.isLoading = false;
         this.registrationSuccess = true;
+        this.cdr.detectChanges();
 
         setTimeout(() => {
           this.router.navigate(['/login']);
@@ -65,15 +69,19 @@ export class RegisterComponent {
       },
       error: (error) => {
         console.error('Erro no registro', error);
-        this.isLoading = false;
 
-        if (error.status === 409) {
-          this.errorMessage = 'Este login já está em uso. Tente outro.';
-        } else if (error.status === 400) {
-          this.errorMessage = 'Dados inválidos. Verifique as informações.';
-        } else {
-          this.errorMessage = 'Erro ao criar conta. Tente novamente.';
-        }
+        this.isLoading = false;
+        this.registrationSuccess = false;
+        this.errorMessage = error.message || 'Erro ao realizar registro. Tente novamente.';
+        this.showError = true;
+        this.cdr.detectChanges();
+
+        console.log('Mensagem de erro:', this.errorMessage);
+
+        setTimeout(() => {
+          this.showError = false;
+          this.cdr.detectChanges();
+        }, 5000);
       }
     });
   } 

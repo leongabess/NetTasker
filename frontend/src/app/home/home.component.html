@@ -1,1 +1,46 @@
-<p>home works!</p>
+<div class="home-container">
+  <div class="header">
+    <h1>Minhas Tarefas</h1>
+    <div class="actions">
+      <button class="btn-test" (click)="loadTodoItems()">
+        Testar Token
+      </button>
+      <button class="btn-logout" (click)="logout()">
+        Sair
+      </button>
+    </div>
+  </div>
+
+  <!-- Mensagem de status -->
+  <div *ngIf="message" class="message" [class.erro]="message.includes('expirou')">
+    {{ message }}
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="loading">
+    <span class="spinner"></span>
+    Carregando...
+  </div>
+
+  <!-- Lista de tarefas -->
+  <div *ngIf="!loading" class="todoItems-lista">
+    <div *ngIf="todoItems.length === 0 && !message" class="vazio">
+      Nenhuma tarefa cadastrada.
+    </div>
+
+    <div *ngFor="let todoItem of todoItems" class="todoItem-item">
+      <span class="status" [class.concluida]="todoItem.isComplete">
+        {{ todoItem.isComplete ? '✅' : '⏳' }}
+      </span>
+      <span class="nome">{{ todoItem.name }}</span>
+    </div>
+  </div>
+
+  <!-- Informações do token -->
+  <div class="token-info" *ngIf="authService.isLoggedIn()">
+    <p>🔑 Token válido</p>
+    <p style="font-size: 12px; color: #666;">
+      Faça uma requisição para testar (botão "Testar Token")
+    </p>
+  </div>
+</div>
