@@ -49,7 +49,6 @@ export class AuthService {
     console.log('Error status:', error.status);
     console.log('Error:', error.error);
 
-    //returns error messages from the backend
     if (error.error) {
       if (typeof error.error === 'string') {
         errorMessage = error.error;
@@ -64,7 +63,7 @@ export class AuthService {
       }
     }
 
-    //fallback in case of no messages
+    //fallback se não receber mensagens
     if (error.status === 401) {
       errorMessage = error.error?.message || 'Usuário ou senha inválidos';
     } else if (error.status === 400) {

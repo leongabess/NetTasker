@@ -1,46 +1,125 @@
 <div class="home-container">
-  <div class="header">
-    <h1>Minhas Tarefas</h1>
-    <div class="actions">
-      <button class="btn-test" (click)="loadTodoItems()">
-        Testar Token
-      </button>
-      <button class="btn-logout" (click)="logout()">
-        Sair
-      </button>
-    </div>
-  </div>
-
-  <!-- Mensagem de status -->
-  <div *ngIf="message" class="message" [class.erro]="message.includes('expirou')">
-    {{ message }}
-  </div>
-
-  <!-- Loading -->
-  <div *ngIf="loading" class="loading">
-    <span class="spinner"></span>
-    Carregando...
-  </div>
-
-  <!-- Lista de tarefas -->
-  <div *ngIf="!loading" class="todoItems-lista">
-    <div *ngIf="todoItems.length === 0 && !message" class="vazio">
-      Nenhuma tarefa cadastrada.
+  <div class="home-card">
+    
+    <div class="card-header">
+      <h1>Minhas Tarefas</h1>
+      <div class="user-info">
+        <span class="user-name">Olá, {{ getUserName() }}</span>
+        <button class="btn-logout" (click)="logout()">Sair</button>
+      </div>
     </div>
 
-    <div *ngFor="let todoItem of todoItems" class="todoItem-item">
-      <span class="status" [class.concluida]="todoItem.isComplete">
-        {{ todoItem.isComplete ? '✅' : '⏳' }}
+    
+    <div *ngIf="errorMessage" class="error-message">
+      {{ errorMessage }}
+    </div>
+
+    
+    <div *ngIf="isLoading" class="loading-overlay">
+      <div class="loading-spinner"></div>
+      <span>Carregando...</span>
+    </div>
+
+    
+    <div class="filters">
+      <button class="filter-btn"
+              [class.active]="currentFilter === 'all'"
+              (click)="changeFilter('all')">
+        Todas ({{ todos.length }})
+      </button>
+      <button class="filter-btn"
+              [class.active]="currentFilter === 'pending'"
+              (click)="changeFilter('pending')">
+        Pendentes ({{ getFilteredTodos().length }})
+      </button>
+      <button class="filter-btn"
+              [class.active]="currentFilter === 'completed'"
+              (click)="changeFilter('completed')">
+        Concluídas ({{ getFilteredTodos().length }})
+      </button>
+    </div>
+
+    
+    <div class="todo-list">
+      <div *ngIf="getFilteredTodos().length === 0 && !isLoading" class="empty-message">
+        <p>Nenhuma tarefa encontrada</p>
+        <p class="empty-sub">Crie sua primeira tarefa abaixo!</p>
+      </div>
+
+      <div *ngFor="let todo of getCurrentPageTodos()" class="todo-item">
+        <div class="todo-content">
+          <span class="todo-name" [class.completed-text]="todo.isComplete">
+            {{ todo.name }}
+          </span>
+          <div class="todo-actions">
+            <!-- Botão de toggle (Concluir/Desmarcar) -->
+            <button class="btn-toggle"
+                    [class.completed]="todo.isComplete"
+                    [class.loading]="updatingTodoId === todo.id"
+                    (click)="toggleComplete(todo)"
+                    [disabled]="updatingTodoId === todo.id || isLoading"
+                    title="{{ todo.isComplete ? 'Marcar como pendente' : 'Marcar como concluída' }}">
+              <span *ngIf="updatingTodoId === todo.id" class="spinner"></span>
+              <span *ngIf="updatingTodoId !== todo.id">
+                {{ todo.isComplete ? '✅' : '⬜' }}
+              </span>
+            </button>
+            <!-- Status text -->
+            <span class="todo-status" [class.completed]="todo.isComplete">
+              {{ todo.isComplete ? 'Concluída' : 'Pendente' }}
+            </span>
+            
+            <button class="btn-delete" (click)="deleteTodo(todo.id)" [disabled]="isLoading" title="Excluir tarefa">
+              🗑️
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="add-todo">
+      <input type="text"
+             [(ngModel)]="newTodoName"
+             placeholder="Digite o nome da tarefa..."
+             (keyup.enter)="addTodo()"
+             class="todo-input"
+             [disabled]="isLoading" />
+      <button class="btn-add" (click)="addTodo()" [disabled]="isLoading">
+        ➕ Adicionar
+      </button>
+    </div>
+
+    
+    <div class="pagination" *ngIf="getFilteredTodos().length > 0">
+      <button class="page-btn"
+              (click)="goToPage(currentPage - 1)"
+              [disabled]="currentPage === 1 || isLoading">
+        ◀
+      </button>
+
+      <span *ngFor="let page of getPages()" class="page-numbers">
+        <button class="page-num"
+                [class.active]="currentPage === page"
+                (click)="goToPage(page)"
+                [disabled]="isLoading">
+          {{ page }}
+        </button>
       </span>
-      <span class="nome">{{ todoItem.name }}</span>
-    </div>
-  </div>
 
-  <!-- Informações do token -->
-  <div class="token-info" *ngIf="authService.isLoggedIn()">
-    <p>🔑 Token válido</p>
-    <p style="font-size: 12px; color: #666;">
-      Faça uma requisição para testar (botão "Testar Token")
-    </p>
+      <button class="page-btn"
+              (click)="goToPage(currentPage + 1)"
+              [disabled]="currentPage === getTotalPages() || isLoading">
+        ▶
+      </button>
+    </div>
+
+    
+    <div class="page-info" *ngIf="getFilteredTodos().length > 0">
+      Página {{ currentPage }} de {{ getTotalPages() }}
+      <span class="todo-count">
+        ({{ getFilteredTodos().length }} tarefas)
+      </span>
+    </div>
   </div>
 </div>
