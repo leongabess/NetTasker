@@ -1,12 +1,17 @@
 # NetTasker
 
-<h2>API feita utilizando ASP.NET Core com C# para criação de usuários, gerenciamento de tarefas, com autenticação e armazenamento seguro de senha</h2>
+<h2>API feita utilizando ASP.NET Core com C# e Angular para criação de usuários, gerenciamento de tarefas, autenticação e armazenamento seguro de senha</h2>
 
-<p>Atualmente a API conta com as funções de criação de usuário, login com autenticação e retorno de token, assim como criação e manipulação de tarefas com a devida verificação do usuário.</p>
+<p>Atualmente a API conta com as funções de criação de usuário, login com autenticação, armazenamento e exclusão do token, assim como criação e manipulação de tarefas com a devida verificação do usuário.</p>
+
 <p>O hash da senha é feito através do BCrypt, para um balanço de eficiência e segurança.</p>
+
 <p>O armazenamento é feito no SQL Server, também possui os esquemas de migration para a criação das tabelas usuário e atividades. Testes das rotas foram feitos no postman.</p>
 
-# Testes de rotas do backend
+<p>No front-end está sendo utilizado o framework Angular para direcionamento das rotas, interface do usuário e autenticação necessária.</p>
+
+
+# Testes de rotas do back-end
 <details><summary>Criação de usuário</summary>
 
   ```
@@ -89,6 +94,8 @@
 
 # Futuras atualizações
 <ul>
-  <li>Finalizar home do usuário no front-end</li>
-  <li>Conexão do front-end junto ao back-end</li>
+  <li>Atualilzar e refatorar o código do Angular</li>
+  <li>Adicionar mais racursos visuais atraentes para o usuário</li>
+  <li>Adicionar opção para que usário coloque foto de perfil</li>
+  <li>Dar deploy no site</li>
 </ul>
