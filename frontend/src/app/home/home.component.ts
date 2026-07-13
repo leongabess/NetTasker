@@ -44,8 +44,9 @@ export class HomeComponent implements OnInit {
 
     this.todoService.getTodos().subscribe({
       next: (todos) => {
-        this.todos = todos;
+        this.todos = todos.sort((a, b) => b.id - a.id);
         this.isLoading = false;
+        this.currentPage = 1;
         this.cdr.detectChanges();
       },
       error: (error) => {
@@ -78,15 +79,15 @@ export class HomeComponent implements OnInit {
     const newTodo: TodoCreateDto = {
       name: name,
       isComplete: false,
-      userId: user.id || 1 
+      userId: user.id
     };
-
     this.todoService.createTodo(newTodo).subscribe({
       next: (createdTodo) => {
+        this.todos = [createdTodo, ...this.todos];
         this.loadTodos();
         this.newTodoName = '';
+        this.currentPage = 1;
         setTimeout(() => {
-          this.goToLastPage();
           this.cdr.detectChanges();
         }, 100);
       },
@@ -114,7 +115,10 @@ export class HomeComponent implements OnInit {
 
     this.todoService.updateTodo(todo.id, updatedTodo).subscribe({
       next: (updated) => {
-        this.loadTodos();
+        const index = this.todos.findIndex(t => t.id === updated.id);
+        if (index !== -1) {
+          this.todos[index] = updated;
+        }
         this.updatingTodoId = null;
         this.cdr.detectChanges();
       },
@@ -136,6 +140,7 @@ export class HomeComponent implements OnInit {
 
     this.todoService.deleteTodo(id).subscribe({
       next: () => {
+        this.todos = this.todos.filter(t => t.id !== id);
         this.loadTodos();
         setTimeout(() => {
           const totalPages = this.getTotalPages();
@@ -206,6 +211,10 @@ export class HomeComponent implements OnInit {
     this.currentFilter = filter;
     this.currentPage = 1;
     this.cdr.detectChanges();
+  }
+
+  trackByTodoId(index: number, todo: Todo): number {
+    return todo.id; 
   }
 
   //Mostrar username e logout

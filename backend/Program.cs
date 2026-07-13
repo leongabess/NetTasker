@@ -100,7 +100,7 @@ app.MapPost("/users/register", async (UserRegisterDto dto, UserDb db) =>
     //Checks if user already exists
     var checkUser = await db.Users.AnyAsync(u => u.UserName == dto.UserName);
     if (checkUser)
-        return Results.BadRequest("Username already used."); 
+        return Results.Conflict("Username already used."); 
     
     //Hashes password, creates new user and gives a response using DTO
     string hashPassword = BCrypt.Net.BCrypt.HashPassword(dto.Password);
@@ -241,6 +241,7 @@ app.MapGet("/todoitems", async (HttpContext httpContext, TodoDb db) =>
             IsComplete = t.IsComplete,
             UserId = t.UserId
         })
+        .OrderByDescending(t => t.Id)
         .ToListAsync();
 
     return Results.Ok(todos);

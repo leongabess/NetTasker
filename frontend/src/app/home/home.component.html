@@ -46,7 +46,7 @@
         <p class="empty-sub">Crie sua primeira tarefa abaixo!</p>
       </div>
 
-      <div *ngFor="let todo of getCurrentPageTodos()" class="todo-item">
+      <div *ngFor="let todo of getCurrentPageTodos(); trackBy: trackByTodoId" class="todo-item">
         <div class="todo-content">
           <span class="todo-name" [class.completed-text]="todo.isComplete">
             {{ todo.name }}
