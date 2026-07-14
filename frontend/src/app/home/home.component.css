@@ -192,10 +192,34 @@
   animation: slideIn 0.3s ease-in;
 }
 
+ .todo-item.removendo {
+    animation: slideOut 0.3s ease forwards;
+    pointer-events: none; 
+  }
+
+@keyframes slideOut {
+  0% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    max-height: 100px;
+    margin-bottom: 8px;
+    padding: 12px 15px;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateX(80px) scale(0.8);
+    max-height: 0;
+    margin-bottom: 0;
+    padding: 0 15px;
+    overflow: hidden;
+  }
+}
+
 @keyframes slideIn {
   from {
     opacity: 0;
-    transform: translateX(-10px);
+    transform: translateX(-20px);
   }
 
   to {

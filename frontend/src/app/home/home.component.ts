@@ -18,7 +18,8 @@ export class HomeComponent implements OnInit {
   newTodoName: string = '';
 
   mostrarModalConfirmacao: boolean = false;
-  tarefaIdParaExcluir: number | null = null;
+  todoIdParaExcluir: number | null = null;
+  todosRemovendo: Set<number> = new Set();
 
   isLoading: boolean = false;
   errorMessage: string = '';
@@ -126,9 +127,10 @@ export class HomeComponent implements OnInit {
         const index = this.todos.findIndex(t => t.id === updated.id);
         if (index !== -1) {
           this.todos[index] = updated;
-        }
+        }        
         this.updatingTodoId = null;
         this.cdr.detectChanges();
+        
       },
       error: (error) => {
         console.error('Erro ao atualizar tarefa:', error);
@@ -140,30 +142,42 @@ export class HomeComponent implements OnInit {
 
   //Confirmação para deletar atividade
   deleteTodo(id: number): void {
-    this.tarefaIdParaExcluir = id;
+    this.todoIdParaExcluir = id;
     this.mostrarModalConfirmacao = true;
   }
 
   fecharModalConfirmacao() {
     this.mostrarModalConfirmacao = false;
-    this.tarefaIdParaExcluir = null;
   }
 
-  confirmarExclusaoTarefa() {
-    if (this.tarefaIdParaExcluir !== null) {
-      this.todoService.deleteTodo(this.tarefaIdParaExcluir).subscribe({
-        next: () => {
-          this.todos = this.todos.filter(t => t.id !== this.tarefaIdParaExcluir);
-          console.log('Tarefa deletada com sucesso!');
-          this.fecharModalConfirmacao();
-          this.cdr.detectChanges();
-        }, 
-        error: (erro) => {
-          console.error('Erro ao deletar tarefa:', erro);
-          this.fecharModalConfirmacao();
-        }
-      });
+
+  confirmarExclusaoTodo() {
+    if (this.todoIdParaExcluir !== null) {
+      const id = this.todoIdParaExcluir;
+      this.todosRemovendo.add(id);
+      this.fecharModalConfirmacao();
+
+      this.cdr.detectChanges()
+
+      setTimeout(() => {
+        this.todoService.deleteTodo(id).subscribe({
+          next: () => {
+            this.todos = this.todos.filter(t => t.id !== id);
+            this.todosRemovendo.delete(id);
+            this.cdr.detectChanges()
+            console.log('Todo deletado com sucesso!');
+          },
+          error: (erro) => {
+            console.error('Erro ao deletar todo:', erro);
+            this.todosRemovendo.delete(id);
+          }
+        });
+      }, 300);;
     }
+  }
+
+  isRemovendo(id: number): boolean {
+    return this.todosRemovendo.has(id);
   }
 
   //Visualização da página
