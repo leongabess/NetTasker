@@ -4,21 +4,28 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../services/auth.services';
 import { TodoService, Todo, TodoCreateDto, TodoUpdateDto } from '../services/todo.service';
+import { ConfirmComponent } from '../confirm/confirm.component';
 
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ConfirmComponent],
   templateUrl: './home.component.html',
   styleUrls: ['./home.component.css']
 })
 export class HomeComponent implements OnInit {
   todos: Todo[] = [];
   newTodoName: string = '';
+
+  mostrarModalConfirmacao: boolean = false;
+  tarefaIdParaExcluir: number | null = null;
+
   isLoading: boolean = false;
   errorMessage: string = '';
+
   currentPage: number = 1;
   itemsPerPage: number = 5;
+
   currentFilter: 'all' | 'pending' | 'completed' = 'all';
   updatingTodoId: number | null = null;
 
@@ -30,6 +37,7 @@ export class HomeComponent implements OnInit {
   ) { }
 
   ngOnInit(): void {
+
     //Checar se usuário está logado
     if (!this.authService.isLoggedIn()) {
       this.router.navigate(['/login']);
@@ -130,32 +138,32 @@ export class HomeComponent implements OnInit {
     });
   }
 
+  //Confirmação para deletar atividade
   deleteTodo(id: number): void {
-    if (!confirm('Tem certeza que deseja excluir esta tarefa?')) {
-      return;
-    }
+    this.tarefaIdParaExcluir = id;
+    this.mostrarModalConfirmacao = true;
+  }
 
-    this.isLoading = true;
-    this.errorMessage = '';
+  fecharModalConfirmacao() {
+    this.mostrarModalConfirmacao = false;
+    this.tarefaIdParaExcluir = null;
+  }
 
-    this.todoService.deleteTodo(id).subscribe({
-      next: () => {
-        this.todos = this.todos.filter(t => t.id !== id);
-        this.loadTodos();
-        setTimeout(() => {
-          const totalPages = this.getTotalPages();
-          if (this.currentPage > totalPages && totalPages > 0) {
-            this.currentPage = totalPages;
-          }
+  confirmarExclusaoTarefa() {
+    if (this.tarefaIdParaExcluir !== null) {
+      this.todoService.deleteTodo(this.tarefaIdParaExcluir).subscribe({
+        next: () => {
+          this.todos = this.todos.filter(t => t.id !== this.tarefaIdParaExcluir);
+          console.log('Tarefa deletada com sucesso!');
+          this.fecharModalConfirmacao();
           this.cdr.detectChanges();
-        }, 100);
-      },
-      error: (error) => {
-        console.error('Erro ao deletar tarefa:', error);
-        this.errorMessage = 'Erro ao deletar tarefa. Tente novamente.';
-        this.isLoading = false;
-      }
-    });
+        }, 
+        error: (erro) => {
+          console.error('Erro ao deletar tarefa:', erro);
+          this.fecharModalConfirmacao();
+        }
+      });
+    }
   }
 
   //Visualização da página
@@ -216,6 +224,8 @@ export class HomeComponent implements OnInit {
   trackByTodoId(index: number, todo: Todo): number {
     return todo.id; 
   }
+
+  
 
   //Mostrar username e logout
   getUserName(): string {

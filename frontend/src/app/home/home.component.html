@@ -68,13 +68,19 @@
             <span class="todo-status" [class.completed]="todo.isComplete">
               {{ todo.isComplete ? 'Concluída' : 'Pendente' }}
             </span>
-            
+
             <button class="btn-delete" (click)="deleteTodo(todo.id)" [disabled]="isLoading" title="Excluir tarefa">
               🗑️
             </button>
           </div>
         </div>
       </div>
+      <app-confirm [visivel]="mostrarModalConfirmacao"
+                          [titulo]="'Excluir Tarefa'"
+                          [mensagem]="'Tem certeza que deseja deletar a tarefa? Esta ação não pode ser desfeita.'"
+                          (confirmado)="confirmarExclusaoTarefa()"
+                          (cancelado)="fecharModalConfirmacao()">
+      </app-confirm>
     </div>
 
     
