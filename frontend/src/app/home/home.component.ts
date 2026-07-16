@@ -196,6 +196,18 @@ export class HomeComponent implements OnInit {
     }
   }
 
+  getAllTodosCount(): number{
+    return this.todos.length;
+  }  
+
+  getPendingTodosCount(): number{
+    return this.todos.filter(todo => !todo.isComplete).length;
+  }
+
+  getCompletedTodosCount(): number{
+    return this.todos.filter(todo => todo.isComplete).length;
+  }
+
   getCurrentPageTodos(): Todo[] {
     const filtered = this.getFilteredTodos();
     if (filtered.length === 0) {

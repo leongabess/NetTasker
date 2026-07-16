@@ -10,44 +10,41 @@
       </div>
     </div>
 
-    <!-- Error Message -->
     <div *ngIf="errorMessage" class="error-message">
       {{ errorMessage }}
     </div>
 
-    <!-- Loading Overlay -->
     <div *ngIf="isLoading" class="loading-overlay">
       <div class="loading-spinner"></div>
       <span>Carregando...</span>
     </div>
 
-    <!-- Filters -->
+    <!--filtros-->
     <div class="filters">
       <button class="filter-btn"
               [class.active]="currentFilter === 'all'"
               (click)="changeFilter('all')">
-        Todas ({{ todos.length }})
+        Todas ({{ getAllTodosCount() }})
       </button>
       <button class="filter-btn"
               [class.active]="currentFilter === 'pending'"
               (click)="changeFilter('pending')">
-        Pendentes ({{ getFilteredTodos().length }})
+        Pendentes ({{ getPendingTodosCount() }})
       </button>
       <button class="filter-btn"
               [class.active]="currentFilter === 'completed'"
               (click)="changeFilter('completed')">
-        Concluídas ({{ getFilteredTodos().length }})
+        Concluídas ({{ getCompletedTodosCount() }})
       </button>
     </div>
 
-    <!-- Todo List -->
+    <!--Lista de tarefas-->
     <div class="todo-list">
       <div *ngIf="getFilteredTodos().length === 0 && !isLoading" class="empty-message">
         <p>Nenhuma tarefa encontrada</p>
         <p class="empty-sub">Crie sua primeira tarefa abaixo!</p>
       </div>
 
-      <!-- CORREÇÃO: Único *ngFor com a classe correta -->
       <div *ngFor="let todo of getCurrentPageTodos(); trackBy: trackByTodoId"
            class="todo-item"
            [class.removendo]="isRemovendo(todo.id)">
@@ -58,7 +55,6 @@
           </span>
 
           <div class="todo-actions">
-            <!-- Botão de toggle -->
             <button class="btn-toggle"
                     [class.completed]="todo.isComplete"
                     [class.loading]="updatingTodoId === todo.id"
@@ -71,12 +67,10 @@
               </span>
             </button>
 
-            <!-- Status text -->
             <span class="todo-status" [class.completed]="todo.isComplete">
               {{ todo.isComplete ? 'Concluída' : 'Pendente' }}
             </span>
 
-            <!-- Botão Delete -->
             <button class="btn-delete"
                     (click)="deleteTodo(todo.id)"
                     [disabled]="isLoading || isRemovendo(todo.id)"
@@ -88,7 +82,7 @@
       </div>
     </div>
 
-    <!-- Add Todo -->
+
     <div class="add-todo">
       <input type="text"
              [(ngModel)]="newTodoName"
@@ -97,11 +91,11 @@
              class="todo-input"
              [disabled]="isLoading" />
       <button class="btn-add" (click)="addTodo()" [disabled]="isLoading">
-        ➕ Adicionar
+        Adicionar
       </button>
     </div>
 
-    <!-- Pagination -->
+    <!--Páginas com as atividades-->
     <div class="pagination" *ngIf="getFilteredTodos().length > 0">
       <button class="page-btn"
               (click)="goToPage(currentPage - 1)"
@@ -125,7 +119,6 @@
       </button>
     </div>
 
-    <!-- Page Info -->
     <div class="page-info" *ngIf="getFilteredTodos().length > 0">
       Página {{ currentPage }} de {{ getTotalPages() }}
       <span class="todo-count">
@@ -133,7 +126,7 @@
       </span>
     </div>
 
-    <!-- Modal de Confirmação -->
+    <!--Confirmação de exclusão-->
     <app-confirm [visivel]="mostrarModalConfirmacao"
                  [titulo]="'Excluir Tarefa'"
                  [mensagem]="'Tem certeza que deseja deletar a tarefa? Esta ação não pode ser desfeita.'"

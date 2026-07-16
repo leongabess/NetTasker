@@ -1,20 +1,19 @@
-/* Container principal */
+
 .home-container {
   min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #b2c7f6 0%, #88a6ea 90%);
   padding: 20px;
 }
 
-/* Card principal */
 .home-card {
   background: white;
   border-radius: 20px;
   padding: 30px;
   width: 100%;
-  max-width: 600px;
+  max-width: 800px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   animation: fadeIn 0.5s ease-in;
   position: relative;
@@ -74,7 +73,6 @@
   }
 }
 
-/* Header */
 .card-header {
   display: flex;
   justify-content: space-between;
@@ -161,7 +159,7 @@
 }
 
   .filter-btn:hover:not(:disabled) {
-    background: #e0e0e0;
+    background: #a1b3e0;
   }
 
   .filter-btn.active {
@@ -262,7 +260,6 @@
   flex-shrink: 0;
 }
 
-/* Botão Toggle (Concluir/Desmarcar) */
 .btn-toggle {
   background: none;
   border: 2px solid #ddd;
@@ -298,7 +295,7 @@
     border-color: #667eea;
   }
 
-/* Spinner para loading */
+ /* Spinner loading */
 .spinner {
   display: inline-block;
   width: 16px;
