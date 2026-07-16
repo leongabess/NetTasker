@@ -1,8 +1,8 @@
-import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { Injectable, inject, signal, DestroyRef } from '@angular/core';
+import { HttpClient, HttpHeaders, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { AuthService } from '../services/auth.services';
+import { AuthService } from './auth.services';
 
 export interface Todo {
   id: number;
@@ -26,13 +26,14 @@ export interface TodoUpdateDto {
   providedIn: 'root'
 })
 export class TodoService {
-  private apiUrl = 'http://localhost:5155/todoitems';
+  private readonly http = inject(HttpClient);
+  private readonly authService = inject(AuthService);
+  private readonly destroyRef = inject(DestroyRef);
 
-  constructor(
-    private http: HttpClient,
-    private authService: AuthService
-  ) { }
+  private readonly apiUrl = 'http://localhost:5155/todoitems';
 
+  readonly isLoading = signal(false);
+  readonly errorMessage = signal('');
 
   private getHeaders(): HttpHeaders {
     const token = this.authService.getToken();
@@ -42,41 +43,59 @@ export class TodoService {
     });
   }
 
-  // Metódos similares aos do backend para manipulação das tarefas (GEt, POST, PUT, DELETE)
   getTodos(): Observable<Todo[]> {
-    return this.http.get<Todo[]>(this.apiUrl, { headers: this.getHeaders() })
-      .pipe(catchError(this.handleError));
+    this.isLoading.set(true);
+    this.errorMessage.set('');
+
+    return this.http.get<Todo[]>(this.apiUrl, { headers: this.getHeaders() }).pipe(
+      catchError(this.handleError.bind(this))
+    );
   }
 
-  
   createTodo(todo: TodoCreateDto): Observable<Todo> {
-    return this.http.post<Todo>(this.apiUrl, todo, { headers: this.getHeaders() })
-      .pipe(catchError(this.handleError));
+    this.isLoading.set(true);
+    this.errorMessage.set('');
+
+    return this.http.post<Todo>(this.apiUrl, todo, { headers: this.getHeaders() }).pipe(
+      catchError(this.handleError.bind(this))
+    );
   }
 
-  
   updateTodo(id: number, todo: TodoUpdateDto): Observable<Todo> {
-    return this.http.put<Todo>(`${this.apiUrl}/${id}`, todo, { headers: this.getHeaders() })
-      .pipe(catchError(this.handleError));
+    this.isLoading.set(true);
+    this.errorMessage.set('');
+
+    return this.http.put<Todo>(`${this.apiUrl}/${id}`, todo, { headers: this.getHeaders() }).pipe(
+      catchError(this.handleError.bind(this))
+    );
   }
 
-  
   deleteTodo(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/${id}`, { headers: this.getHeaders() })
-      .pipe(catchError(this.handleError));
+    this.isLoading.set(true);
+    this.errorMessage.set('');
+
+    return this.http.delete<void>(`${this.apiUrl}/${id}`, { headers: this.getHeaders() }).pipe(
+      catchError(this.handleError.bind(this))
+    );
   }
 
-  private handleError(error: any): Observable<never> {
-    console.error('Erro no TodoService:', error);
+  private handleError(error: HttpErrorResponse): Observable<never> {
+    this.isLoading.set(false);
     let errorMessage = 'Erro ao processar operação com tarefas';
 
     if (error.error?.message) {
       errorMessage = error.error.message;
     } else if (error.status === 401) {
       errorMessage = 'Não autorizado. Faça login novamente.';
+      this.authService.logout();
     } else if (error.status === 404) {
       errorMessage = 'Tarefa não encontrada.';
+    } else if (error.status === 0) {
+      errorMessage = 'Erro de conexão. Verifique sua internet.';
     }
+
+    this.errorMessage.set(errorMessage);
+    console.error('TodoService Error:', error);
 
     return throwError(() => new Error(errorMessage));
   }

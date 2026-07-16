@@ -1,81 +1,141 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject, signal, computed, DestroyRef } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { BehaviorSubject, Observable, throwError } from 'rxjs';
-import { catchError, tap } from 'rxjs/operators';
 import { Router } from '@angular/router';
+import { Observable, throwError } from 'rxjs';
+import { catchError, tap } from 'rxjs/operators';
+
+export interface UserCredentials {
+  userName: string;
+  password: string;
+  name?: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: {
+    id: number;
+    userName: string;
+    name?: string;
+  };
+}
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
-  private apiUrl = 'http://localhost:5155/users';
+  private readonly http = inject(HttpClient);
+  private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
 
-  
+  private readonly apiUrl = 'http://localhost:5155/users';
+  private readonly TOKEN_KEY = 'auth_token';
+  private readonly USER_DATA_KEY = 'user_data';
 
-  private loggedInSubject = new BehaviorSubject<boolean>(this.hasToken());
-  loggedIn$ = this.loggedInSubject.asObservable();
 
-  constructor(
-    private http: HttpClient,
-    private router: Router
-  ) { }
+  private readonly tokenSignal = signal<string | null>(this.getTokenFromStorage());
 
-  private hasToken(): boolean {
-    return !!localStorage.getItem('auth_token');
+  private readonly userSignal = signal<any | null>(this.getUserFromStorage());
+
+  readonly isLoggedIn = computed(() => {
+    const token = this.tokenSignal();
+    return !!token;
+  });
+
+  readonly currentUser = computed(() => this.userSignal());
+
+  readonly isLoading = signal(false);
+  readonly errorMessage = signal('');
+
+  constructor() {
+    this.updateState();
   }
 
-  register(credentials: { userName: string, password: string, name?: string }): Observable<any> {
+  private getTokenFromStorage(): string | null {
+    return localStorage.getItem(this.TOKEN_KEY);
+  }
+
+  private getUserFromStorage(): any | null {
+    const userData = localStorage.getItem(this.USER_DATA_KEY);
+    return userData ? JSON.parse(userData) : null;
+  }
+
+  private updateState(): void {
+    const token = this.getTokenFromStorage();
+    const user = this.getUserFromStorage();
+    this.tokenSignal.set(token);
+    this.userSignal.set(user);
+  }
+
+  register(credentials: UserCredentials): Observable<any> {
+    this.isLoading.set(true);
+    this.errorMessage.set('');
+
     return this.http.post(`${this.apiUrl}/register`, credentials).pipe(
-      catchError(this.handleError)
+      tap({
+        next: () => this.isLoading.set(false),
+        error: () => this.isLoading.set(false)
+      }),
+      catchError(this.handleError.bind(this))
     );
   }
 
-  login(credentials: {userName: string, password: string}): Observable<any> {
-    return this.http.post(`${this.apiUrl}/login`, credentials).pipe(
-      tap((response: any) => {
-        const token = response.token || response.Token;
-        if (token) {
-          //Saves token
-          localStorage.setItem('auth_token', token);
-          localStorage.setItem('user_data', JSON.stringify(response.user || { userName: credentials.userName }));
-          this.loggedInSubject.next(true);
-        }
-      }), catchError(this.handleError)
+  login(credentials: { userName: string; password: string }): Observable<AuthResponse> {
+    this.isLoading.set(true);
+    this.errorMessage.set('');
+
+    return this.http.post<AuthResponse>(`${this.apiUrl}/login`, credentials).pipe(
+      tap({
+        next: (response) => {
+          this.isLoading.set(false);
+          const token = response.token || (response as any).Token;
+          if (token) {
+            this.setSession(token, response.user || { userName: credentials.userName });
+          }
+        },
+        error: () => this.isLoading.set(false)
+      }),
+      catchError(this.handleError.bind(this))
     );
+  }
+
+  private setSession(token: string, user: any): void {
+    // Salva no localStorage
+    localStorage.setItem(this.TOKEN_KEY, token);
+    localStorage.setItem(this.USER_DATA_KEY, JSON.stringify(user));
+
+    this.tokenSignal.set(token);
+    this.userSignal.set(user);
   }
 
   private handleError(error: HttpErrorResponse): Observable<never> {
-    let errorMessage = 'Problem with login.';
-    console.log('Error status:', error.status);
-    console.log('Error:', error.error);
+    this.isLoading.set(false);
+    let errorMessage = 'Problema com a operação.';
 
     if (error.error) {
       if (typeof error.error === 'string') {
         errorMessage = error.error;
-      }
-
-      else if (error.error.message) {
+      } else if (error.error.message) {
         errorMessage = error.error.message;
-      }
-
-      else if (error.error.msg) {
+      } else if (error.error.msg) {
         errorMessage = error.error.msg;
       }
     }
 
-    //fallback se não receber mensagens
-    if (error.status === 401) {
-      errorMessage = error.error?.message || 'Usuário ou senha inválidos';
-    } else if (error.status === 400) {
-      errorMessage = error.error?.message || 'Usuário já existe, utilize outro nome de usuário';
-    } else if (error.status === 0) {
-      errorMessage = 'Erro de conexão. Verifique sua internet.';
-    } else if (error.error?.message) {
-      errorMessage = error.error.message;
+    switch (error.status) {
+      case 401:
+        errorMessage = error.error?.message || 'Usuário ou senha inválidos';
+        break;
+      case 400:
+        errorMessage = error.error?.message || 'Usuário já existe, utilize outro nome de usuário';
+        break;
+      case 0:
+        errorMessage = 'Erro de conexão. Verifique sua internet.';
+        break;
     }
 
-    console.log('Error message: ', errorMessage);
-    console.error('Erro no login:', error);
+    this.errorMessage.set(errorMessage);
+    console.error('AuthService Error:', error);
+
     return throwError(() => ({
       message: errorMessage,
       status: error.status,
@@ -84,24 +144,25 @@ export class AuthService {
   }
 
   logout(): void {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('user_data');
-    this.loggedInSubject.next(false);
+    // Remove do localStorage
+    localStorage.removeItem(this.TOKEN_KEY);
+    localStorage.removeItem(this.USER_DATA_KEY);
+
+    this.tokenSignal.set(null);
+    this.userSignal.set(null);
+
     this.router.navigate(['/login']);
   }
 
   getToken(): string | null {
-    return localStorage.getItem('auth_token');
+    return this.tokenSignal();
   }
 
-  getUser(): any {
-    const userData = localStorage.getItem('user_data');
-    return userData ? JSON.parse(userData) : null;
+  getUser(): any | null {
+    return this.userSignal();
   }
 
-  isLoggedIn(): boolean {
-    return this.hasToken();
+  hasValidToken(): boolean {
+    return this.isLoggedIn();
   }
 }
-
-

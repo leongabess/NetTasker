@@ -1,8 +1,10 @@
-import { Component, OnInit, ChangeDetectorRef} from '@angular/core';
+import { Component, OnInit, signal, inject, DestroyRef, computed, effect } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-import { RouterLink, Router } from "@angular/router";
-import { AuthService } from "../services/auth.services";
+import { RouterLink, Router } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { finalize } from 'rxjs/operators';
+import { AuthService } from '../services/auth.services';
 
 @Component({
   selector: 'app-login',
@@ -11,72 +13,96 @@ import { AuthService } from "../services/auth.services";
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.css']
 })
-export class LoginComponent implements OnInit{
-  loginForm: FormGroup;
-  submitted = false;
-  loginSuccess = false;
-  errorMessage = '';
-  showError = false;
-  isLoading = false;
+export class LoginComponent implements OnInit {
+  private readonly authService = inject(AuthService);
+  private readonly router = inject(Router);
+  private readonly formBuilder = inject(FormBuilder);
+  private readonly destroyRef = inject(DestroyRef);
 
-  constructor(private formBuilder: FormBuilder, private authService: AuthService, private router: Router, private cdr: ChangeDetectorRef) {
+  readonly isLoading = signal(false);
+  readonly errorMessage = signal('');
+  readonly showError = signal(false);
+  readonly loginSuccess = signal(false);
+  readonly submitted = signal(false);
+
+
+  readonly isLoggedIn = this.authService.isLoggedIn;
+
+
+  loginForm: FormGroup;
+
+  constructor() {
     this.loginForm = this.formBuilder.group({
       userName: ['', [Validators.required, Validators.minLength(3)]],
       password: ['', [Validators.required, Validators.minLength(6)]]
     });
+
+    effect(() => {
+      if (this.isLoggedIn()) {
+        console.log('Usuário logado detectado via effect!');
+      }
+    });
   }
 
-  get f() { 
-    return this.loginForm.controls; 
-  }
 
   ngOnInit(): void {
-    if (this.authService.isLoggedIn()) {
+    if (this.isLoggedIn()) {
+      console.log('Usuário já está logado, redirecionando...');
       this.router.navigate(['/home']);
     }
   }
 
-  onSubmit() {
-    this.submitted = true;
-    this.errorMessage = '';
-    this.loginSuccess = false;
-    this.showError = false;
+
+  get f() {
+    return this.loginForm.controls;
+  }
+
+  //Metódos
+  onSubmit(): void {
+    this.submitted.set(true);
+    this.errorMessage.set('');
+    this.loginSuccess.set(false);
+    this.showError.set(false);
 
     if (this.loginForm.invalid) {
       this.loginForm.markAllAsTouched();
       return;
     }
 
+    this.isLoading.set(true);
 
-    this.isLoading = true;
-    this.cdr.detectChanges(); 
+    this.authService.login(this.loginForm.value)
+      .pipe(
+        finalize(() => this.isLoading.set(false)),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: (response) => {
+          console.log('Login realizado com sucesso', response);
+          this.loginSuccess.set(true);
 
 
-    this.authService.login(this.loginForm.value).subscribe({
-      next: (response) => {
-        console.log('Login feito', response);
-        this.isLoading = false;
-        this.loginSuccess = true;
-        this.errorMessage = '';
-        this.cdr.detectChanges();
+          setTimeout(() => {
+            if (this.isLoggedIn()) {
+              console.log('Redirecionando para home...');
+              this.router.navigate(['/home']);
+            } else {
+              console.error('Token não foi salvo corretamente');
+              this.errorMessage.set('Erro ao salvar dados de login');
+              this.showError.set(true);
+            }
+          }, 1000);
+        },
+        error: (error) => {
+          console.error('Erro no login', error);
+          this.loginSuccess.set(false);
+          this.errorMessage.set(error.message || 'Erro ao realizar login. Tente novamente.');
+          this.showError.set(true);
 
-        setTimeout(() => {
-          this.router.navigate(['/home']);
-        }, 1000);
-      },
-      error: (error) => {
-        this.isLoading = false;
-        this.loginSuccess = false;
-
-        this.errorMessage = error.message || 'Problem trying to log in';
-        this.showError = true;
-        this.cdr.detectChanges();
-
-        setTimeout(() => {
-          this.showError = false;
-          this.cdr.detectChanges();
-        }, 5000);
-      }
-    });
+          setTimeout(() => {
+            this.showError.set(false);
+          }, 5000);
+        }
+      });
   }
 }

@@ -1,79 +1,101 @@
 <div class="register-container">
-
   <div class="Welcoming">
     <h2>Bem-vindo!</h2>
-    <p>Utilize a plataforma para criação de seu usuário e senha. 
-        Após isso, basta criar e acompanhar suas atividades do dia-a-dia. <br>
-        Aproveite para monitorar suas atividades e se planejar melhor.
+    <p>
+      Utilize a plataforma para criação de seu usuário e senha.
+      Após isso, basta criar e acompanhar suas atividades do dia-a-dia. <br>
+      Aproveite para monitorar suas atividades e se planejar melhor.
     </p>
-</div>
+  </div>
+
   <div class="register-card">
     <h2>Registrar-se</h2>
     <p class="subtitle">Crie sua conta</p>
 
-    <div *ngIf="showError && errorMessage" class="alert alert-danger" role="alert">
+    @if (showError() && errorMessage()) {
+    <div class="alert alert-danger" role="alert">
       <i class="fas fa-exclamation-circle"></i>
-      <span>{{ errorMessage }}</span>
+      <span>{{ errorMessage() }}</span>
     </div>
+    }
 
-    <div *ngIf="registrationSuccess" class="alert alert-success" role="alert">
+    @if (registrationSuccess()) {
+    <div class="alert alert-success" role="alert">
       <i class="fas fa-check-circle"></i>
       <span>Cadastro realizado com sucesso! Redirecionando para o login...</span>
     </div>
-
+    }
 
     <form [formGroup]="registerForm" (ngSubmit)="onSubmit()">
       <div class="form-group">
-
         <div class="form-group">
           <label for="name">Nome</label>
           <input type="text"
                  id="name"
                  formControlName="name"
                  class="form-control"
-                 [class.is-invalid]="submitted && f['name'].errors"
+                 [class.is-invalid]="submitted() && f['name'].errors"
                  placeholder="Digite seu nome"
-                 [disabled]="isLoading">
-          <div *ngIf="submitted && f['name'].errors" class="invalid-feedback">
-            <div *ngIf="f['name'].errors['required']">Nome é obrigatório</div>
+                 [disabled]="isLoading()" />
+          @if (submitted() && f['name'].errors) {
+          <div class="invalid-feedback">
+            @if (f['name'].errors['required']) {
+            <div>Nome é obrigatório</div>
+            }
           </div>
+          }
         </div>
 
-        <label for="userName">Nome de usuário</label>
-        <input type="text"
-               id="userName"
-               formControlName="userName"
-               class="form-control"
-               [class.is-invalid]="submitted && f['userName'].errors"
-               placeholder="Digite seu nome de usuário">
-        <div *ngIf="submitted && f['userName'].errors" class="invalid-feedback">
-          <div *ngIf="f['userName'].errors['required']">Nome de usuário é obrigatório</div>
-          <div *ngIf="f['userName'].errors['minlength']">nome de usuário deve ter pelo menos 3 caracteres</div>
+        <div class="form-group">
+          <label for="userName">Nome de usuário</label>
+          <input type="text"
+                 id="userName"
+                 formControlName="userName"
+                 class="form-control"
+                 [class.is-invalid]="submitted() && f['userName'].errors"
+                 placeholder="Digite seu nome de usuário"
+                 [disabled]="isLoading()" />
+          @if (submitted() && f['userName'].errors) {
+          <div class="invalid-feedback">
+            @if (f['userName'].errors['required']) {
+            <div>Nome de usuário é obrigatório</div>
+            }
+            @if (f['userName'].errors['minlength']) {
+            <div>Nome de usuário deve ter pelo menos 3 caracteres</div>
+            }
+          </div>
+          }
         </div>
+
+        <div class="form-group">
+          <label for="password">Senha</label>
+          <input type="password"
+                 id="password"
+                 formControlName="password"
+                 class="form-control"
+                 [class.is-invalid]="submitted() && f['password'].errors"
+                 placeholder="Digite sua senha"
+                 [disabled]="isLoading()" />
+          @if (submitted() && f['password'].errors) {
+          <div class="invalid-feedback">
+            @if (f['password'].errors['required']) {
+            <div>Senha é obrigatória</div>
+            }
+            @if (f['password'].errors['minlength']) {
+            <div>Senha deve ter pelo menos 6 caracteres</div>
+            }
+          </div>
+          }
+        </div>
+
+        <button type="submit" class="btn-register" [disabled]="isLoading()">
+          {{ isLoading() ? 'Registrando...' : 'Registrar' }}
+        </button>
       </div>
-
-      <div class="form-group">
-        <label for="password">Senha</label>
-        <input type="password"
-               id="password"
-               formControlName="password"
-               class="form-control"
-               [class.is-invalid]="submitted && f['password'].errors"
-               placeholder="Digite sua senha">
-        <div *ngIf="submitted && f['password'].errors" class="invalid-feedback">
-          <div *ngIf="f['password'].errors['required']">Senha é obrigatória</div>
-          <div *ngIf="f['password'].errors['minlength']">Senha deve ter pelo menos 6 caracteres</div>
-        </div>
-      </div>
-
-      <button type="submit" class="btn-register" [disabled]="isLoading">
-        <span></span>
-        {{ isLoading ? 'Registrando...': 'Registrar'}}
-      </button>
     </form>
 
     <div class="register-link">
-      Já tem uma conta? <a routerLink="login">Faça login</a>
+      Já tem uma conta? <a routerLink="/login">Faça login</a>
     </div>
   </div>
 </div>

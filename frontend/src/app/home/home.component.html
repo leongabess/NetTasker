@@ -1,70 +1,102 @@
 <div class="home-container">
   <div class="home-card">
 
-    <!-- Header -->
     <div class="card-header">
       <h1>Minhas Tarefas</h1>
       <div class="user-info">
-        <span class="user-name">Olá, {{ getUserName() }}</span>
+        <span class="user-name">Olá, {{ userName() }}</span>
         <button class="btn-logout" (click)="logout()">Sair</button>
       </div>
     </div>
 
-    <div *ngIf="errorMessage" class="error-message">
-      {{ errorMessage }}
+    @if (errorMessage()) {
+    <div class="error-message">
+      {{ errorMessage() }}
     </div>
+    }
 
-    <div *ngIf="isLoading" class="loading-overlay">
+    @if (isLoading()) {
+    <div class="loading-overlay">
       <div class="loading-spinner"></div>
       <span>Carregando...</span>
     </div>
+    }
 
-    <!--filtros-->
+    <!-- Filtros -->
     <div class="filters">
       <button class="filter-btn"
-              [class.active]="currentFilter === 'all'"
+              [class.active]="currentFilter() === 'all'"
               (click)="changeFilter('all')">
-        Todas ({{ getAllTodosCount() }})
+        Todas ({{ allCount() }})
       </button>
       <button class="filter-btn"
-              [class.active]="currentFilter === 'pending'"
+              [class.active]="currentFilter() === 'pending'"
               (click)="changeFilter('pending')">
-        Pendentes ({{ getPendingTodosCount() }})
+        Pendentes ({{ pendingCount() }})
       </button>
       <button class="filter-btn"
-              [class.active]="currentFilter === 'completed'"
+              [class.active]="currentFilter() === 'completed'"
               (click)="changeFilter('completed')">
-        Concluídas ({{ getCompletedTodosCount() }})
+        Concluídas ({{ completedCount() }})
       </button>
     </div>
 
-    <!--Lista de tarefas-->
+    <!-- Lista de tarefas -->
     <div class="todo-list">
-      <div *ngIf="getFilteredTodos().length === 0 && !isLoading" class="empty-message">
+      @if (filteredTodos().length === 0 && !isLoading()) {
+      <div class="empty-message">
         <p>Nenhuma tarefa encontrada</p>
         <p class="empty-sub">Crie sua primeira tarefa abaixo!</p>
       </div>
+      }
 
-      <div *ngFor="let todo of getCurrentPageTodos(); trackBy: trackByTodoId"
-           class="todo-item"
-           [class.removendo]="isRemovendo(todo.id)">
-
+      @for (todo of currentPageTodos(); track todo.id) {
+      <div class="todo-item" [class.removendo]="isRemovendo(todo.id)">
         <div class="todo-content">
-          <span class="todo-name" [class.completed-text]="todo.isComplete">
+
+          @if (editandoTodoId() === todo.id) {
+          <div class="todo-edit-mode" style="width: 100%;">
+            <input type="text"
+                   [ngModel]="editandoNome()"
+                   (ngModelChange)="editandoNome.set($event)"
+                   (keyup.enter)="salvarEdicao(todo)"
+                   (keyup.escape)="cancelarEdicao()"
+                   class="todo-edit-input"
+                   autofocus />
+            <div class="todo-edit-actions">
+              <button class="btn-save-edit" (click)="salvarEdicao(todo)" [disabled]="isLoading()">
+                Salvar
+              </button>
+              <button class="btn-cancel-edit" (click)="cancelarEdicao()" [disabled]="isLoading()">
+                Cancelar
+              </button>
+            </div>
+          </div>
+          } @else {
+          <span class="todo-name" [class.completed-text]="todo.isComplete"
+                (dblclick)="iniciarEdicao(todo)">
             {{ todo.name }}
           </span>
 
           <div class="todo-actions">
+            <button class="btn-edit"
+                    (click)="iniciarEdicao(todo)"
+                    [disabled]="isLoading()"
+                    title="Editar tarefa">
+              ✏️
+            </button>
+
             <button class="btn-toggle"
                     [class.completed]="todo.isComplete"
-                    [class.loading]="updatingTodoId === todo.id"
+                    [class.loading]="updatingTodoId() === todo.id"
                     (click)="toggleComplete(todo)"
-                    [disabled]="updatingTodoId === todo.id || isLoading"
+                    [disabled]="updatingTodoId() === todo.id || isLoading()"
                     title="{{ todo.isComplete ? 'Marcar como pendente' : 'Marcar como concluída' }}">
-              <span *ngIf="updatingTodoId === todo.id" class="spinner"></span>
-              <span *ngIf="updatingTodoId !== todo.id">
-                {{ todo.isComplete ? '✅' : '⬜' }}
-              </span>
+              @if (updatingTodoId() === todo.id) {
+              <span class="spinner"></span>
+              } @else {
+              <span>{{ todo.isComplete ? '✅' : '⬜' }}</span>
+              }
             </button>
 
             <span class="todo-status" [class.completed]="todo.isComplete">
@@ -73,61 +105,66 @@
 
             <button class="btn-delete"
                     (click)="deleteTodo(todo.id)"
-                    [disabled]="isLoading || isRemovendo(todo.id)"
+                    [disabled]="isLoading() || isRemovendo(todo.id)"
                     title="Excluir tarefa">
               🗑️
             </button>
           </div>
+          }
         </div>
       </div>
+      }
     </div>
-
 
     <div class="add-todo">
       <input type="text"
-             [(ngModel)]="newTodoName"
+             [ngModel]="newTodoName()"
+             (ngModelChange)="newTodoName.set($event)"
              placeholder="Digite o nome da tarefa..."
              (keyup.enter)="addTodo()"
              class="todo-input"
-             [disabled]="isLoading" />
-      <button class="btn-add" (click)="addTodo()" [disabled]="isLoading">
+             [disabled]="isLoading()" />
+      <button class="btn-add" (click)="addTodo()" [disabled]="isLoading()">
         Adicionar
       </button>
     </div>
 
-    <!--Páginas com as atividades-->
-    <div class="pagination" *ngIf="getFilteredTodos().length > 0">
+    <!-- Paginação -->
+    @if (filteredTodos().length > 0) {
+    <div class="pagination">
       <button class="page-btn"
-              (click)="goToPage(currentPage - 1)"
-              [disabled]="currentPage === 1 || isLoading">
+              (click)="goToPage(currentPage() - 1)"
+              [disabled]="currentPage() === 1 || isLoading()">
         ◀
       </button>
 
-      <span *ngFor="let page of getPages()" class="page-numbers">
+      @for (page of pages(); track page) {
+      <span class="page-numbers">
         <button class="page-num"
-                [class.active]="currentPage === page"
+                [class.active]="currentPage() === page"
                 (click)="goToPage(page)"
-                [disabled]="isLoading">
+                [disabled]="isLoading()">
           {{ page }}
         </button>
       </span>
+      }
 
       <button class="page-btn"
-              (click)="goToPage(currentPage + 1)"
-              [disabled]="currentPage === getTotalPages() || isLoading">
+              (click)="goToPage(currentPage() + 1)"
+              [disabled]="currentPage() === totalPages() || isLoading()">
         ▶
       </button>
     </div>
 
-    <div class="page-info" *ngIf="getFilteredTodos().length > 0">
-      Página {{ currentPage }} de {{ getTotalPages() }}
+    <div class="page-info">
+      Página {{ currentPage() }} de {{ totalPages() }}
       <span class="todo-count">
-        ({{ getFilteredTodos().length }} tarefas)
+        ({{ filteredTodos().length }} tarefas)
       </span>
     </div>
+    }
 
-    <!--Confirmação de exclusão-->
-    <app-confirm [visivel]="mostrarModalConfirmacao"
+    <app-confirm [visivel]="mostrarModalConfirmacao()"
                  [titulo]="'Excluir Tarefa'"
                  [mensagem]="'Tem certeza que deseja deletar a tarefa? Esta ação não pode ser desfeita.'"
                  (confirmado)="confirmarExclusaoTodo()"

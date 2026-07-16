@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Output, Input } from '@angular/core';
+import { Component, signal, input, output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 @Component({
@@ -9,18 +9,18 @@ import { CommonModule } from '@angular/common';
   styleUrls: ['./confirm.component.css']
 })
 export class ConfirmComponent {
-  @Input() titulo: string = 'Confirmar ação';
-  @Input() mensagem: string = 'Tem certeza que deseja continuar?';
-  @Input() visivel: boolean = false;
+  readonly titulo = input<string>('Confirmar ação');
+  readonly mensagem = input<string>('Tem certeza que deseja continuar?');
+  readonly visivel = input<boolean>(false);
 
-  @Output() confirmado = new EventEmitter<void>();
-  @Output() cancelado = new EventEmitter<void>();
+  readonly confirmado = output<void>();
+  readonly cancelado = output<void>();
 
-  confirmar() {
+  confirmar(): void {
     this.confirmado.emit();
   }
 
-  cancelar() {
+  cancelar(): void {
     this.cancelado.emit();
   }
 }

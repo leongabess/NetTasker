@@ -1,10 +1,14 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, computed, signal, inject, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { finalize } from 'rxjs/operators';
 import { AuthService } from '../services/auth.services';
 import { TodoService, Todo, TodoCreateDto, TodoUpdateDto } from '../services/todo.service';
 import { ConfirmComponent } from '../confirm/confirm.component';
+
+type TodoFilter = 'all' | 'pending' | 'completed';
 
 @Component({
   selector: 'app-home',
@@ -14,32 +18,62 @@ import { ConfirmComponent } from '../confirm/confirm.component';
   styleUrls: ['./home.component.css']
 })
 export class HomeComponent implements OnInit {
-  todos: Todo[] = [];
-  newTodoName: string = '';
+  private readonly authService = inject(AuthService);
+  private readonly todoService = inject(TodoService);
+  private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
 
-  mostrarModalConfirmacao: boolean = false;
-  todoIdParaExcluir: number | null = null;
-  todosRemovendo: Set<number> = new Set();
+  private readonly itemsPerPage = 5;
+  private readonly deleteAnimationMs = 300; 
 
-  isLoading: boolean = false;
-  errorMessage: string = '';
+  readonly todos = signal<Todo[]>([]);
+  readonly newTodoName = signal('');
+  readonly isLoading = signal(false);
+  readonly errorMessage = signal('');
+  readonly currentPage = signal(1);
+  readonly currentFilter = signal<TodoFilter>('all');
 
-  currentPage: number = 1;
-  itemsPerPage: number = 5;
+  readonly editandoTodoId = signal<number | null>(null);
+  readonly editandoNome = signal('');
+  readonly updatingTodoId = signal<number | null>(null);
+  readonly todosRemovendo = signal<ReadonlySet<number>>(new Set());
 
-  currentFilter: 'all' | 'pending' | 'completed' = 'all';
-  updatingTodoId: number | null = null;
+  readonly mostrarModalConfirmacao = signal(false);
+  private todoIdParaExcluir: number | null = null;
 
-  constructor(
-    private authService: AuthService,
-    private todoService: TodoService,
-    private router: Router,
-    private cdr: ChangeDetectorRef
-  ) { }
+  readonly allCount = computed(() => this.todos().length);
+  readonly pendingCount = computed(() => this.todos().filter(t => !t.isComplete).length);
+  readonly completedCount = computed(() => this.todos().filter(t => t.isComplete).length);
+
+  readonly filteredTodos = computed(() => {
+    const todos = this.todos();
+    switch (this.currentFilter()) {
+      case 'pending': return todos.filter(t => !t.isComplete);
+      case 'completed': return todos.filter(t => t.isComplete);
+      default: return todos;
+    }
+  });
+
+  readonly totalPages = computed(() =>
+    Math.ceil(this.filteredTodos().length / this.itemsPerPage) || 1
+  );
+
+  readonly pages = computed(() =>
+    Array.from({ length: this.totalPages() }, (_, i) => i + 1)
+  );
+
+  readonly currentPageTodos = computed(() => {
+    const filtered = this.filteredTodos();
+    const start = (this.currentPage() - 1) * this.itemsPerPage;
+    return filtered.slice(start, start + this.itemsPerPage);
+  });
+
+  readonly userName = computed(() => {
+    const user = this.authService.getUser();
+    return user?.name || user?.userName || 'Usuário';
+  });
 
   ngOnInit(): void {
-
-    //Checar se usuário está logado
     if (!this.authService.isLoggedIn()) {
       this.router.navigate(['/login']);
       return;
@@ -48,215 +82,199 @@ export class HomeComponent implements OnInit {
   }
 
   loadTodos(): void {
-    this.isLoading = true;
-    this.errorMessage = '';
+    this.isLoading.set(true);
+    this.errorMessage.set('');
 
-    this.todoService.getTodos().subscribe({
-      next: (todos) => {
-        this.todos = todos.sort((a, b) => b.id - a.id);
-        this.isLoading = false;
-        this.currentPage = 1;
-        this.cdr.detectChanges();
-      },
-      error: (error) => {
-        console.error('Erro ao carregar tarefas:', error);
-        this.errorMessage = 'Erro ao carregar tarefas. Tente novamente.';
-        this.isLoading = false;
-        this.cdr.detectChanges();
-      }
-    });
+    this.todoService.getTodos()
+      .pipe(
+        finalize(() => this.isLoading.set(false)),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: (todos) => {
+          this.todos.set([...todos].sort((a, b) => b.id - a.id));
+          this.currentPage.set(1);
+        },
+        error: (error) => {
+          console.error('Erro ao carregar tarefas:', error);
+          this.errorMessage.set('Erro ao carregar tarefas. Tente novamente.');
+        }
+      });
   }
 
   addTodo(): void {
-    const name = this.newTodoName.trim();
+    const name = this.newTodoName().trim();
     if (!name) {
-      this.errorMessage = 'Por favor, digite um nome para a tarefa.';
-      this.cdr.detectChanges();
+      this.errorMessage.set('Por favor, digite um nome para a tarefa.');
       return;
     }
 
     const user = this.authService.getUser();
     if (!user) {
-      this.errorMessage = 'Usuário não identificado. Faça login novamente.';
-      this.cdr.detectChanges();
+      this.errorMessage.set('Usuário não identificado. Faça login novamente.');
       return;
     }
 
-    this.isLoading = true;
-    this.errorMessage = '';
+    this.isLoading.set(true);
+    this.errorMessage.set('');
 
-    const newTodo: TodoCreateDto = {
-      name: name,
-      isComplete: false,
-      userId: user.id
-    };
-    this.todoService.createTodo(newTodo).subscribe({
-      next: (createdTodo) => {
-        this.todos = [createdTodo, ...this.todos];
-        this.loadTodos();
-        this.newTodoName = '';
-        this.currentPage = 1;
-        setTimeout(() => {
-          this.cdr.detectChanges();
-        }, 100);
-      },
-      error: (error) => {
-        console.error('Erro ao adicionar tarefa:', error);
-        this.errorMessage = 'Erro ao adicionar tarefa. Tente novamente.';
-        this.isLoading = false;
-      }
-    });
+    const newTodo: TodoCreateDto = { name, isComplete: false, userId: user.id };
+
+    this.todoService.createTodo(newTodo)
+      .pipe(
+        finalize(() => this.isLoading.set(false)),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: (createdTodo) => {
+          this.todos.update(todos => [createdTodo, ...todos]);
+          this.newTodoName.set('');
+          this.currentPage.set(1);
+        },
+        error: (error) => {
+          console.error('Erro ao adicionar tarefa:', error);
+          this.errorMessage.set('Erro ao adicionar tarefa. Tente novamente.');
+        }
+      });
   }
 
   toggleComplete(todo: Todo): void {
-    // Evitar cliques enquanto atualiza
-    if (this.updatingTodoId === todo.id) {
+    if (this.updatingTodoId() === todo.id) {
       return;
     }
 
-    this.updatingTodoId = todo.id;
-    this.errorMessage = '';
+    this.updatingTodoId.set(todo.id);
+    this.errorMessage.set('');
 
-    const updatedTodo: TodoUpdateDto = {
-      name: todo.name,
-      isComplete: !todo.isComplete
-    };
+    const updatedTodo: TodoUpdateDto = { name: todo.name, isComplete: !todo.isComplete };
 
-    this.todoService.updateTodo(todo.id, updatedTodo).subscribe({
-      next: (updated) => {
-        const index = this.todos.findIndex(t => t.id === updated.id);
-        if (index !== -1) {
-          this.todos[index] = updated;
-        }        
-        this.updatingTodoId = null;
-        this.cdr.detectChanges();
-        
-      },
-      error: (error) => {
-        console.error('Erro ao atualizar tarefa:', error);
-        this.errorMessage = 'Erro ao atualizar tarefa. Tente novamente.';
-        this.updatingTodoId = null;
-      }
+    this.todoService.updateTodo(todo.id, updatedTodo)
+      .pipe(
+        finalize(() => this.updatingTodoId.set(null)),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: (updated) => this.replaceTodo(updated),
+        error: (error) => {
+          console.error('Erro ao atualizar tarefa:', error);
+          this.errorMessage.set('Erro ao atualizar tarefa. Tente novamente.');
+        }
+      });
+  }
+
+  //Edição 
+  iniciarEdicao(todo: Todo): void {
+    this.editandoTodoId.set(todo.id);
+    this.editandoNome.set(todo.name);
+  }
+
+  cancelarEdicao(): void {
+    this.editandoTodoId.set(null);
+    this.editandoNome.set('');
+  }
+
+  salvarEdicao(todo: Todo): void {
+    const nomeEditado = this.editandoNome().trim();
+
+    if (!nomeEditado) {
+      this.errorMessage.set('O nome da tarefa não pode estar vazio.');
+      return;
+    }
+
+    if (nomeEditado === todo.name) {
+      this.cancelarEdicao();
+      return;
+    }
+
+    this.isLoading.set(true);
+    this.errorMessage.set('');
+
+    const updatedTodo: TodoUpdateDto = { name: nomeEditado, isComplete: todo.isComplete };
+
+    this.todoService.updateTodo(todo.id, updatedTodo)
+      .pipe(
+        finalize(() => this.isLoading.set(false)),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe({
+        next: (updated) => {
+          this.replaceTodo(updated);
+          this.cancelarEdicao();
+        },
+        error: (error) => {
+          console.error('Erro ao editar tarefa:', error);
+          this.errorMessage.set('Erro ao editar tarefa. Tente novamente.');
+        }
+      });
+  }
+
+  private replaceTodo(updated: Todo): void {
+    this.todos.update(todos => todos.map(t => (t.id === updated.id ? updated : t)));
+  }
+
+  //Exclusão
+
+  deleteTodo(id: number): void {
+    this.todoIdParaExcluir = id;
+    this.mostrarModalConfirmacao.set(true);
+  }
+
+  fecharModalConfirmacao(): void {
+    this.mostrarModalConfirmacao.set(false);
+  }
+
+  confirmarExclusaoTodo(): void {
+    const id = this.todoIdParaExcluir;
+    if (id === null) {
+      return;
+    }
+
+    this.todosRemovendo.update(set => new Set(set).add(id));
+    this.fecharModalConfirmacao();
+
+    setTimeout(() => {
+      this.todoService.deleteTodo(id)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: () => {
+            this.todos.update(todos => todos.filter(t => t.id !== id));
+            this.removerDaListaDeRemocao(id);
+          },
+          error: (error) => {
+            console.error('Erro ao deletar todo:', error);
+            this.errorMessage.set('Erro ao deletar tarefa. Tente novamente.');
+            this.removerDaListaDeRemocao(id);
+          }
+        });
+    }, this.deleteAnimationMs);
+  }
+
+  private removerDaListaDeRemocao(id: number): void {
+    this.todosRemovendo.update(set => {
+      const next = new Set(set);
+      next.delete(id);
+      return next;
     });
   }
 
-  //Confirmação para deletar atividade
-  deleteTodo(id: number): void {
-    this.todoIdParaExcluir = id;
-    this.mostrarModalConfirmacao = true;
-  }
-
-  fecharModalConfirmacao() {
-    this.mostrarModalConfirmacao = false;
-  }
-
-
-  confirmarExclusaoTodo() {
-    if (this.todoIdParaExcluir !== null) {
-      const id = this.todoIdParaExcluir;
-      this.todosRemovendo.add(id);
-      this.fecharModalConfirmacao();
-
-      this.cdr.detectChanges()
-
-      setTimeout(() => {
-        this.todoService.deleteTodo(id).subscribe({
-          next: () => {
-            this.todos = this.todos.filter(t => t.id !== id);
-            this.todosRemovendo.delete(id);
-            this.cdr.detectChanges()
-            console.log('Todo deletado com sucesso!');
-          },
-          error: (erro) => {
-            console.error('Erro ao deletar todo:', erro);
-            this.todosRemovendo.delete(id);
-          }
-        });
-      }, 300);;
-    }
-  }
-
   isRemovendo(id: number): boolean {
-    return this.todosRemovendo.has(id);
+    return this.todosRemovendo().has(id);
   }
 
-  //Visualização da página
-  getFilteredTodos(): Todo[] {
-    if (!this.todos || this.todos.length === 0) {
-      return [];
-    }
-
-    switch (this.currentFilter) {
-      case 'pending':
-        return this.todos.filter(todo => !todo.isComplete);
-      case 'completed':
-        return this.todos.filter(todo => todo.isComplete);
-      default:
-        return this.todos;
-    }
-  }
-
-  getAllTodosCount(): number{
-    return this.todos.length;
-  }  
-
-  getPendingTodosCount(): number{
-    return this.todos.filter(todo => !todo.isComplete).length;
-  }
-
-  getCompletedTodosCount(): number{
-    return this.todos.filter(todo => todo.isComplete).length;
-  }
-
-  getCurrentPageTodos(): Todo[] {
-    const filtered = this.getFilteredTodos();
-    if (filtered.length === 0) {
-      return [];
-    }
-    const startIndex = (this.currentPage - 1) * this.itemsPerPage;
-    const endIndex = startIndex + this.itemsPerPage;
-    return filtered.slice(startIndex, endIndex);
-  }
-
-  getTotalPages(): number {
-    const filtered = this.getFilteredTodos();
-    return Math.ceil(filtered.length / this.itemsPerPage) || 1;
-  }
-
-  getPages(): number[] {
-    const total = this.getTotalPages();
-    return Array.from({ length: total }, (_, i) => i + 1);
-  }
-
+  //Filtros
   goToPage(page: number): void {
-    const total = this.getTotalPages();
-    if (page >= 1 && page <= total) {
-      this.currentPage = page;
-      this.cdr.detectChanges();
+    if (page >= 1 && page <= this.totalPages()) {
+      this.currentPage.set(page);
     }
   }
 
-  goToLastPage(): void {
-    this.currentPage = this.getTotalPages();
-    this.cdr.detectChanges();
-  }
-
-  changeFilter(filter: 'all' | 'pending' | 'completed'): void {
-    this.currentFilter = filter;
-    this.currentPage = 1;
-    this.cdr.detectChanges();
+  changeFilter(filter: TodoFilter): void {
+    this.currentFilter.set(filter);
+    this.currentPage.set(1);
   }
 
   trackByTodoId(index: number, todo: Todo): number {
-    return todo.id; 
-  }
-
-  
-
-  //Mostrar username e logout
-  getUserName(): string {
-    const user = this.authService.getUser();
-    return user?.name || user?.userName || 'Usuário';
+    return todo.id;
   }
 
   logout(): void {

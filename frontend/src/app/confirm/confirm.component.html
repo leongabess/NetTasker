@@ -1,12 +1,13 @@
-<div class="modal-overlay" *ngIf="visivel">
+@if (visivel()) {
+<div class="modal-overlay">
   <div class="modal-container">
     <div class="modal-header">
-      <h3>{{ titulo }}</h3>
+      <h3>{{ titulo() }}</h3>
       <button class="btn-close" (click)="cancelar()">×</button>
     </div>
 
     <div class="modal-body">
-      <p>{{ mensagem }}</p>
+      <p>{{ mensagem() }}</p>
     </div>
 
     <div class="modal-footer">
@@ -15,3 +16,4 @@
     </div>
   </div>
 </div>
+}
