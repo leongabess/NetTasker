@@ -97,10 +97,10 @@ if (app.Environment.IsDevelopment())
 
 app.MapPost("/users/register", async (UserRegisterDto dto, UserDb db) =>
 {   
-    //Checks if user already exists
+    //Checar se usuário existe
     var checkUser = await db.Users.AnyAsync(u => u.UserName == dto.UserName);
     if (checkUser)
-        return Results.Conflict("Username already used."); 
+        return Results.Conflict("Username já utilizado."); 
     
     //Hashes password, creates new user and gives a response using DTO
     string hashPassword = BCrypt.Net.BCrypt.HashPassword(dto.Password);
@@ -128,12 +128,12 @@ app.MapPost("/users/login", async  (UserLoginDto dto, UserDb db) =>
 {
     try
     {
-        //Checks if the username is on the database and checks if the password matches
+        //Checar se UserName existe no db e se a senha confere
         var user = await db.Users.FirstOrDefaultAsync(u => u.UserName == dto.Username);
         if (user == null)
         {
             return Results.Json(
-                new { message = "Wrong user or password" },
+                new { message = "Usuário ou senha errada" },
                 statusCode: 401);
         }
 
@@ -145,7 +145,7 @@ app.MapPost("/users/login", async  (UserLoginDto dto, UserDb db) =>
                 statusCode: 401);
         }
 
-        //Creates the token and creates a new session for the user
+        //Criação de token e sessão para usuário
         var tokenHandler = new JwtSecurityTokenHandler();
         var key = Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:Secret"]!);
         var tokenDescriptor = new SecurityTokenDescriptor
@@ -155,13 +155,13 @@ app.MapPost("/users/login", async  (UserLoginDto dto, UserDb db) =>
             SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
         };
         var token = tokenHandler.CreateToken(tokenDescriptor);
-        return Results.Ok(new { success = true, msg = "Logged in.", Token = tokenHandler.WriteToken(token) });
+        return Results.Ok(new { success = true, msg = "Logado.", Token = tokenHandler.WriteToken(token) });
     }
     catch (Exception ex)
     {
         return Results.Json(new
         {
-            message = "Problem trying to log in",
+            message = "Problema ao tentar entrar",
             error = ex.Message
         }, statusCode: 500);
     }
@@ -170,13 +170,13 @@ app.MapPost("/users/login", async  (UserLoginDto dto, UserDb db) =>
 app.MapPost("/todoitems", async (TodoDto dto, HttpContext httpContext, TodoDb db) =>
 {
 
-    //Checks if the user is logged to post the task using httpContextExtensions class
+    //Checa se o usuário está logado para postar atividades usando classe httpContextExtensions
     var userIdClaim = httpContext.User.FindFirst("UserId")?.Value;
     if (string.IsNullOrEmpty(userIdClaim))
         return Results.Unauthorized();
     int userId = int.Parse(userIdClaim);
 
-    //Creates new task based on the user logged while returning the result with DTO
+    //Cria nova atividade baseado no usuário logado enquanto retorna os resultados com o DTO
     var todo = new Todo
     {
         Name = dto.Name,
@@ -204,7 +204,7 @@ app.MapPut("/todoitems/{id}", async (HttpContext httpContext, int id, TodoDb db,
 
     var todo = await db.Todos.FindAsync(id);
     if (todo == null)
-        return Results.NotFound($"Id {id} not found.");
+        return Results.NotFound($"Id {id} não encontrada.");
     if (todo.UserId != userId)
         return Results.Forbid(); 
 
@@ -225,13 +225,13 @@ app.MapPut("/todoitems/{id}", async (HttpContext httpContext, int id, TodoDb db,
 
 app.MapGet("/todoitems", async (HttpContext httpContext, TodoDb db) =>
 {
-    //Gets the userId from the token
+    //Pega o UserId do token
     var userIdClaim = httpContext.User.FindFirst("UserId")?.Value;
     if (string.IsNullOrEmpty(userIdClaim))
         return Results.Unauthorized();
     int userId = int.Parse(userIdClaim);
 
-    //Gets the tasks from the specific user
+    //Pega a atividade específica do usuário
     var todos = await db.Todos
         .Where(t => t.UserId == userId)
         .Select(t => new TodoDto
@@ -259,7 +259,7 @@ app.MapDelete("/todoitems/{id}", async (int id, HttpContext httpContext, TodoDb 
 
     if (todo.UserId != userId)
     {
-        return Results.Forbid();  // 403 - Forbidden
+        return Results.Forbid();
     }
     db.Todos.Remove(todo);
     await db.SaveChangesAsync();
