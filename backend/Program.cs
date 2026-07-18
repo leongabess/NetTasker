@@ -141,7 +141,7 @@ app.MapPost("/users/login", async  (UserLoginDto dto, UserDb db) =>
         if (!passwordMatch)
         {
             return Results.Json(
-                new { message = "Wrong user or password" },
+                new { message = "Usuário ou senha errada." },
                 statusCode: 401);
         }
 
