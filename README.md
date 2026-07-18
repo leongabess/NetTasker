@@ -11,6 +11,19 @@
 <p>No front-end está sendo utilizado o framework Angular para direcionamento das rotas, interface do usuário e autenticação necessária.</p>
 
 
+# Preview do front-end em ação
+
+
+https://github.com/user-attachments/assets/0b7a5cab-5bbd-4c83-935f-5c81c3f020e6
+
+https://github.com/user-attachments/assets/3dac1352-48bf-48a6-ad0d-b2c976af8333
+
+https://github.com/user-attachments/assets/13a7699b-bb03-4f77-b5b4-54a7a55343c8
+
+https://github.com/user-attachments/assets/9ae3511b-a327-49a8-9473-2a379288fa0f
+
+
+
 # Testes de rotas do back-end
 <details><summary>Criação de usuário</summary>
 
@@ -67,7 +80,7 @@
 ```
 </details>
 <br> 
-<details><summary>Criação de usuário</summary>
+<details><summary>Edição de atividades</summary>
 
   ```
   Url: http://localhost:5155/todoitems/{id}
@@ -83,7 +96,7 @@
 ```
 </details>
 <br> 
-<details><summary>Criação de usuário</summary>
+<details><summary>Exclusão de atividades</summary>
 
   ```
   Url: http://localhost:5155/todoitems/{id}
@@ -94,8 +107,7 @@
 
 # Futuras atualizações
 <ul>
-  <li>Atualilzar e refatorar o código do Angular</li>
-  <li>Adicionar mais racursos visuais atraentes para o usuário</li>
-  <li>Adicionar opção para que usário coloque foto de perfil</li>
+  <li>Adicionar opção para que usário adicione foto de perfil</li>
+  <li>Aviso de confirmação antes do logout</li>
   <li>Dar deploy no site</li>
 </ul>
