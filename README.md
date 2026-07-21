@@ -10,6 +10,8 @@
 
 <p>No front-end está sendo utilizado o framework Angular para direcionamento das rotas, interface do usuário e autenticação necessária.</p>
 
+<p> O site está disponível! Pode acessar em: https://nettasker-cmdnfuaybzf3d4er.centralus-01.azurewebsites.net</p>
+<p>Para o deploy do site, foi utilizado o ecossistema Azure, com Azure SQL Server como banco de dados (migrando as tabelas do banco de dados local), e o back-end junto do front-end no Serviçço de aplicativo. Pode utilizar o site para testar ou visualizar abaixo os videos mostrando a aplicação.</p>
 
 # Preview do front-end em ação
 
