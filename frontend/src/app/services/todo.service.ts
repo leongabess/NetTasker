@@ -3,6 +3,7 @@ import { HttpClient, HttpHeaders, HttpErrorResponse } from '@angular/common/http
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { AuthService } from './auth.services';
+import { environment } from '../environments/environment';
 
 export interface Todo {
   id: number;
@@ -30,7 +31,7 @@ export class TodoService {
   private readonly authService = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
 
-  private readonly apiUrl = 'http://localhost:5155/todoitems';
+  private readonly apiUrl = `${environment.apiUrl}/todoitems`;
 
   readonly isLoading = signal(false);
   readonly errorMessage = signal('');

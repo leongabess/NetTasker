@@ -275,4 +275,8 @@ app.MapPut("/users/{id}", async (int id, User inputUser, UserDb db) =>
     return Results.NoContent();
 }).RequireAuthorization();
 
+app.UseDefaultFiles();
+app.UseStaticFiles();
+app.MapFallbackToFile("index.html");
+
 app.Run();
