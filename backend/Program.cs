@@ -266,11 +266,44 @@ app.MapDelete("/todoitems/{id}", async (int id, HttpContext httpContext, TodoDb 
     return Results.NoContent();
 }).RequireAuthorization();
 
-app.MapPut("/users/{id}", async (int id, User inputUser, UserDb db) =>
+app.MapPatch("/users/{id}", async (int id, UserDb db, HttpContext httpContext) =>
 {
+    var userIdClaim = httpContext.User.FindFirst("UserId")?.Value;
+    if (string.IsNullOrEmpty(userIdClaim))
+        return Results.Unauthorized();
+    if (!int.TryParse(userIdClaim, out int authenticatedUserId))
+        return Results.Unauthorized();
+    if (authenticatedUserId != id)
+        return Results.Forbid();
+
     var user = await db.Users.FindAsync(id);
-    if (user is null) return Results.NotFound();
-    user.Name = inputUser.Name;
+    if (user is null)
+        return Results.NotFound();
+    string? newName = httpContext.Request.Form["Name"];
+    if (!string.IsNullOrEmpty(newName))
+        user.Name = newName;
+
+    //Recebe o arquivo de imagem do formulário e valida o tipo e tamanho do arquivo
+    var image = httpContext.Request.Form.Files.GetFile("image");
+    if (image is not null && image.Length > 0)
+    {
+        var allowedTypes = new[] { "image/jpeg", "image/png", "image/jpg" };
+        if (!allowedTypes.Contains(image.ContentType))
+        {
+            return Results.BadRequest(new { error = "Tipo de arquivo inválido. Apenas JPEG e PNG são permitidos." });
+        }
+
+        const long maxFileSize = 5 * 1024 * 1024;
+        if (image.Length > maxFileSize)
+        {
+            return Results.BadRequest("O tamanho do arquivo excede o limite de 5 MB.");
+        }
+
+        using var ms = new MemoryStream();
+        await image.CopyToAsync(ms);
+        user.Image = ms.ToArray();
+    }
+
     await db.SaveChangesAsync();
     return Results.NoContent();
 }).RequireAuthorization();
