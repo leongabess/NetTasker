@@ -2,12 +2,89 @@
   <div class="home-card">
 
     <div class="card-header">
-      <h1>Minhas Tarefas</h1>
-      <div class="user-info">
-        <span class="user-name">Olá, {{ userName() }}</span>
+      <div class="header-left">
+        <h1>Minhas Tarefas</h1>
+      </div>
+      <div class="header-right">
+        <!-- Perfil do usuário  -->
+        <div class="user-profile" (click)="iniciarEdicaoUsuario()" title="Clique para editar perfil">
+          <div class="user-avatar">
+            <img [src]="userStore.usuarioAtual()?.imageUrl || 'assets/default-avatar.png'"
+                 alt="Foto do usuário"
+                 class="avatar-img"
+                 (error)="userStore['_imagemUrl'].set(null)">
+          </div>
+          <span class="user-name">{{ userName() }}</span>
+        </div>
         <button class="btn-logout" (click)="logout()">Sair</button>
       </div>
     </div>
+
+    <!-- Edição do usuário ===== -->
+    @if (userStore.editando()) {
+    <div class="modal-overlay" (click)="cancelarEdicaoUsuario()">
+      <div class="modal-content" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>Editar Perfil</h2>
+          <button class="modal-close" (click)="cancelarEdicaoUsuario()">×</button>
+        </div>
+
+        <div class="modal-body">
+          <!-- Preview da imagem -->
+          <div class="image-preview-container">
+            <div class="image-preview">
+              <img [src]="userStore.previewUrl() || userStore.usuarioAtual()?.imageUrl || 'assets/default-avatar.png'"
+                   alt="Preview do avatar"
+                   class="preview-img">
+            </div>
+          </div>
+
+          <!-- Edição nome-->
+          <div class="form-group">
+            <label for="editUserName">Nome</label>
+            <input id="editUserName"
+                   type="text"
+                   [ngModel]="userStore.nomeEditando()"
+                   (ngModelChange)="userStore.atualizarNomeEditando($event)"
+                   placeholder="Digite seu nome"
+                   class="form-control"
+                   (keyup.enter)="salvarEdicaoUsuario()">
+          </div>
+
+          <!-- Edição imagem -->
+          <div class="form-group">
+            <label for="editUserImage">Foto de perfil</label>
+            <input id="editUserImage"
+                   type="file"
+                   (change)="onFileSelected($event)"
+                   accept="image/jpeg,image/png,image/jpg"
+                   class="form-control-file">
+            <small class="text-muted">Formatos: JPEG, PNG. Máx: 5MB</small>
+          </div>
+
+          <!-- Mensagem de erro/sucesso do store -->
+          @if (userStore.erro()) {
+          <div class="store-message" [class.error]="userStore.erro() !== 'Usuário atualizado com sucesso!'" [class.success]="userStore.erro() === 'Usuário atualizado com sucesso!'">
+            {{ userStore.erro() }}
+          </div>
+          }
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn-modal-cancel"
+                  (click)="cancelarEdicaoUsuario()"
+                  [disabled]="userStore.atualizando()">
+            Cancelar
+          </button>
+          <button class="btn-modal-save"
+                  (click)="salvarEdicaoUsuario()"
+                  [disabled]="userStore.atualizando()">
+            {{ userStore.atualizando() ? 'Salvando...' : 'Salvar' }}
+          </button>
+        </div>
+      </div>
+    </div>
+    }
 
     @if (errorMessage()) {
     <div class="error-message">

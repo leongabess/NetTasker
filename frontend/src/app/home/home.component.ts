@@ -7,6 +7,7 @@ import { finalize } from 'rxjs/operators';
 import { AuthService } from '../services/auth.services';
 import { TodoService, Todo, TodoCreateDto, TodoUpdateDto } from '../services/todo.service';
 import { ConfirmComponent } from '../confirm/confirm.component';
+import { UserStoreService } from '../services/userStore.services';
 
 type TodoFilter = 'all' | 'pending' | 'completed';
 
@@ -22,22 +23,22 @@ export class HomeComponent implements OnInit {
   private readonly todoService = inject(TodoService);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+  readonly userStore = inject(UserStoreService);
 
   private readonly itemsPerPage = 5;
   private readonly deleteAnimationMs = 300; 
 
+  //Signals para as atividades
   readonly todos = signal<Todo[]>([]);
   readonly newTodoName = signal('');
   readonly isLoading = signal(false);
   readonly errorMessage = signal('');
   readonly currentPage = signal(1);
   readonly currentFilter = signal<TodoFilter>('all');
-
   readonly editandoTodoId = signal<number | null>(null);
   readonly editandoNome = signal('');
   readonly updatingTodoId = signal<number | null>(null);
   readonly todosRemovendo = signal<ReadonlySet<number>>(new Set());
-
   readonly mostrarModalConfirmacao = signal(false);
   private todoIdParaExcluir: number | null = null;
 
@@ -73,12 +74,23 @@ export class HomeComponent implements OnInit {
     return user?.name || user?.userName || 'Usuário';
   });
 
+  //Signals para o usuário
+  readonly usuarioAtual = computed(() => this.userStore.usuarioAtual());
+  readonly nomeExibicao = computed(() => this.userStore.nomeExibicao());
+  readonly editandoUsuario = computed(() => this.userStore.editando());
+  readonly nomeEditando = computed(() => this.userStore.nomeEditando());
+  readonly imagemUrl = computed(() => this.userStore.imagemUrl());
+  readonly previewUrl = computed(() => this.userStore.previewUrl());
+  readonly atualizandoUsuario = computed(() => this.userStore.atualizando());
+  readonly erroUsuario = computed(() => this.userStore.erro());
+
   ngOnInit(): void {
     if (!this.authService.isLoggedIn()) {
       this.router.navigate(['/login']);
       return;
     }
     this.loadTodos();
+    this.userStore.carregarImagem();
   }
 
   loadTodos(): void {
@@ -102,6 +114,32 @@ export class HomeComponent implements OnInit {
       });
   }
 
+  //Métodos para usuário
+  iniciarEdicaoUsuario(): void {
+    this.userStore.iniciarEdicao();
+  }
+
+  cancelarEdicaoUsuario(): void {
+    this.userStore.cancelarEdicao();
+  }
+
+  salvarEdicaoUsuario(): void {
+    this.userStore.salvarEdicao();
+  }
+
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] || null;
+
+    // Reseta o input para permitir selecionar o mesmo arquivo novamente
+    if (input) {
+      input.value = '';
+    }
+
+    this.userStore.selecionarImagem(file);
+  }
+
+  //Métodos para atividade
   addTodo(): void {
     const name = this.newTodoName().trim();
     if (!name) {
@@ -260,6 +298,7 @@ export class HomeComponent implements OnInit {
   isRemovendo(id: number): boolean {
     return this.todosRemovendo().has(id);
   }
+
 
   //Filtros
   goToPage(page: number): void {

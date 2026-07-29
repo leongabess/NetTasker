@@ -109,6 +109,5 @@ https://github.com/user-attachments/assets/9ae3511b-a327-49a8-9473-2a379288fa0f
 
 # Futuras atualizações
 <ul>
-  <li>Adicionar opção para que usário adicione foto de perfil</li>
   <li>Aviso de confirmação antes do logout</li>
 </ul>

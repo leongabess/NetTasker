@@ -155,7 +155,7 @@ app.MapPost("/users/login", async  (UserLoginDto dto, UserDb db) =>
             SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
         };
         var token = tokenHandler.CreateToken(tokenDescriptor);
-        return Results.Ok(new { success = true, msg = "Logado.", Token = tokenHandler.WriteToken(token) });
+        return Results.Ok(new { success = true, msg = "Logado.", Token = tokenHandler.WriteToken(token), userId = user.Id, userName = user.UserName, name = user.Name });
     }
     catch (Exception ex)
     {
@@ -307,6 +307,13 @@ app.MapPatch("/users/{id}", async (int id, UserDb db, HttpContext httpContext) =
     await db.SaveChangesAsync();
     return Results.NoContent();
 }).RequireAuthorization();
+
+app.MapGet("/users/{id}/image", async (int id, UserDb db) =>
+{
+    var user = await db.Users.FindAsync(id);
+    if (user?.Image is null) return Results.NotFound();
+    return Results.File(user.Image, "image/png"); 
+});
 
 app.UseDefaultFiles();
 app.UseStaticFiles();

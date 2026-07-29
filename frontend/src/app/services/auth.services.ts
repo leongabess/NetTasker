@@ -1,22 +1,31 @@
+// auth.services.ts - CORRIGIDO
+
 import { Injectable, inject, signal, computed, DestroyRef } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Observable, throwError } from 'rxjs';
+import { Observable, throwError, BehaviorSubject } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
 import { environment } from '../environments/environment';
+
+export interface User {
+  id: number;
+  userName: string;
+  name?: string;
+}
+
 export interface UserCredentials {
   userName: string;
   password: string;
   name?: string;
 }
 
-export interface AuthResponse {
-  token: string;
-  user: {
-    id: number;
-    userName: string;
-    name?: string;
-  };
+export interface LoginResponse {
+  success: boolean;
+  msg: string;
+  Token: string;
+  userId: number;
+  userName: string;
+  name: string;
 }
 
 @Injectable({
@@ -31,13 +40,15 @@ export class AuthService {
   private readonly TOKEN_KEY = 'auth_token';
   private readonly USER_DATA_KEY = 'user_data';
 
+  private readonly tokenSubject = new BehaviorSubject<string | null>(this.getTokenFromStorage());
+  private readonly userSubject = new BehaviorSubject<User | null>(this.getUserFromStorage());
 
-  private readonly tokenSignal = signal<string | null>(this.getTokenFromStorage());
-
-  private readonly userSignal = signal<any | null>(this.getUserFromStorage());
+  readonly tokenSignal = signal<string | null>(this.getTokenFromStorage());
+  readonly userSignal = signal<User | null>(this.getUserFromStorage());
 
   readonly isLoggedIn = computed(() => {
     const token = this.tokenSignal();
+    console.log('[AuthService] isLoggedIn computado, token:', !!token);
     return !!token;
   });
 
@@ -54,7 +65,7 @@ export class AuthService {
     return localStorage.getItem(this.TOKEN_KEY);
   }
 
-  private getUserFromStorage(): any | null {
+  private getUserFromStorage(): User | null {
     const userData = localStorage.getItem(this.USER_DATA_KEY);
     return userData ? JSON.parse(userData) : null;
   }
@@ -62,8 +73,13 @@ export class AuthService {
   private updateState(): void {
     const token = this.getTokenFromStorage();
     const user = this.getUserFromStorage();
+
+    console.log('[AuthService] updateState - token:', !!token, 'user:', !!user);
+
     this.tokenSignal.set(token);
     this.userSignal.set(user);
+    this.tokenSubject.next(token);
+    this.userSubject.next(user);
   }
 
   register(credentials: UserCredentials): Observable<any> {
@@ -79,32 +95,59 @@ export class AuthService {
     );
   }
 
-  login(credentials: { userName: string; password: string }): Observable<AuthResponse> {
+  login(credentials: { userName: string; password: string }): Observable<LoginResponse> {
     this.isLoading.set(true);
     this.errorMessage.set('');
 
-    return this.http.post<AuthResponse>(`${this.apiUrl}/login`, credentials).pipe(
+    console.log('[AuthService] Iniciando login para:', credentials.userName);
+
+    return this.http.post<LoginResponse>(`${this.apiUrl}/login`, credentials).pipe(
       tap({
         next: (response) => {
+          console.log('[AuthService] Response bruto:', response);
+          console.log('[AuthService] Response.Token:', response.Token);
+          console.log('[AuthService] Response.token:', (response as any).token);
+
           this.isLoading.set(false);
-          const token = response.token || (response as any).Token;
+
+          const token = response.Token || (response as any).token;
+          console.log('[AuthService] Token extraído:', token ? 'sim' : 'não');
+
           if (token) {
-            this.setSession(token, response.user || { userName: credentials.userName });
+            const user: User = {
+              id: response.userId,
+              userName: response.userName,
+              name: response.name || response.userName
+            };
+
+            console.log('[AuthService] Usuário criado:', user);
+            this.setSession(token, user);
+          } else {
+            console.error('[AuthService] Token não encontrado!');
+            console.error('[AuthService] Response:', JSON.stringify(response));
           }
         },
-        error: () => this.isLoading.set(false)
+        error: (error) => {
+          console.error('[AuthService] Erro HTTP:', error);
+          this.isLoading.set(false);
+        }
       }),
       catchError(this.handleError.bind(this))
     );
   }
 
-  private setSession(token: string, user: any): void {
-    // Salva no localStorage
+  private setSession(token: string, user: User): void {
+    console.log('[AuthService] setSession - salvando token e user');
+
     localStorage.setItem(this.TOKEN_KEY, token);
     localStorage.setItem(this.USER_DATA_KEY, JSON.stringify(user));
 
     this.tokenSignal.set(token);
     this.userSignal.set(user);
+    this.tokenSubject.next(token);
+    this.userSubject.next(user);
+
+    console.log('[AuthService] setSession - signals atualizados');
   }
 
   private handleError(error: HttpErrorResponse): Observable<never> {
@@ -144,12 +187,15 @@ export class AuthService {
   }
 
   logout(): void {
-    // Remove do localStorage
+    console.log('[AuthService] logout');
+
     localStorage.removeItem(this.TOKEN_KEY);
     localStorage.removeItem(this.USER_DATA_KEY);
 
     this.tokenSignal.set(null);
     this.userSignal.set(null);
+    this.tokenSubject.next(null);
+    this.userSubject.next(null);
 
     this.router.navigate(['/login']);
   }
@@ -158,7 +204,7 @@ export class AuthService {
     return this.tokenSignal();
   }
 
-  getUser(): any | null {
+  getUser(): User | null {
     return this.userSignal();
   }
 
