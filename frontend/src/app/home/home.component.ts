@@ -75,14 +75,14 @@ export class HomeComponent implements OnInit {
   });
 
   //Signals para o usuário
-  readonly usuarioAtual = computed(() => this.userStore.usuarioAtual());
-  readonly nomeExibicao = computed(() => this.userStore.nomeExibicao());
-  readonly editandoUsuario = computed(() => this.userStore.editando());
-  readonly nomeEditando = computed(() => this.userStore.nomeEditando());
-  readonly imagemUrl = computed(() => this.userStore.imagemUrl());
-  readonly previewUrl = computed(() => this.userStore.previewUrl());
-  readonly atualizandoUsuario = computed(() => this.userStore.atualizando());
-  readonly erroUsuario = computed(() => this.userStore.erro());
+  readonly usuarioAtual = this.userStore.usuarioAtual;
+  readonly nomeExibicao = this.userStore.nomeExibicao;
+  readonly editandoUsuario = this.userStore.editando;
+  readonly nomeEditando = this.userStore.nomeEditando;
+  readonly imagemUrl = this.userStore.imagemUrl;
+  readonly previewUrl = this.userStore.previewUrl;
+  readonly atualizandoUsuario = this.userStore.atualizando;
+  readonly erroUsuario = this.userStore.erro;
 
   ngOnInit(): void {
     if (!this.authService.isLoggedIn()) {

@@ -77,8 +77,7 @@ export class LoginComponent implements OnInit {
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe({
-        next: (response) => {
-          console.log('Login realizado com sucesso', response);
+        next: () => {
           this.loginSuccess.set(true);
 
 

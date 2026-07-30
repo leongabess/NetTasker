@@ -1,5 +1,3 @@
-// auth.services.ts - CORRIGIDO
-
 import { Injectable, inject, signal, computed, DestroyRef } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
@@ -74,8 +72,6 @@ export class AuthService {
     const token = this.getTokenFromStorage();
     const user = this.getUserFromStorage();
 
-    console.log('[AuthService] updateState - token:', !!token, 'user:', !!user);
-
     this.tokenSignal.set(token);
     this.userSignal.set(user);
     this.tokenSubject.next(token);
@@ -99,19 +95,12 @@ export class AuthService {
     this.isLoading.set(true);
     this.errorMessage.set('');
 
-    console.log('[AuthService] Iniciando login para:', credentials.userName);
-
     return this.http.post<LoginResponse>(`${this.apiUrl}/login`, credentials).pipe(
       tap({
         next: (response) => {
-          console.log('[AuthService] Response bruto:', response);
-          console.log('[AuthService] Response.Token:', response.Token);
-          console.log('[AuthService] Response.token:', (response as any).token);
-
           this.isLoading.set(false);
 
           const token = response.Token || (response as any).token;
-          console.log('[AuthService] Token extraído:', token ? 'sim' : 'não');
 
           if (token) {
             const user: User = {
@@ -120,15 +109,11 @@ export class AuthService {
               name: response.name || response.userName
             };
 
-            console.log('[AuthService] Usuário criado:', user);
             this.setSession(token, user);
-          } else {
-            console.error('[AuthService] Token não encontrado!');
-            console.error('[AuthService] Response:', JSON.stringify(response));
           }
         },
         error: (error) => {
-          console.error('[AuthService] Erro HTTP:', error);
+          console.error('Erro HTTP:', error);
           this.isLoading.set(false);
         }
       }),
@@ -137,7 +122,6 @@ export class AuthService {
   }
 
   private setSession(token: string, user: User): void {
-    console.log('[AuthService] setSession - salvando token e user');
 
     localStorage.setItem(this.TOKEN_KEY, token);
     localStorage.setItem(this.USER_DATA_KEY, JSON.stringify(user));
@@ -146,8 +130,6 @@ export class AuthService {
     this.userSignal.set(user);
     this.tokenSubject.next(token);
     this.userSubject.next(user);
-
-    console.log('[AuthService] setSession - signals atualizados');
   }
 
   private handleError(error: HttpErrorResponse): Observable<never> {
@@ -187,7 +169,6 @@ export class AuthService {
   }
 
   logout(): void {
-    console.log('[AuthService] logout');
 
     localStorage.removeItem(this.TOKEN_KEY);
     localStorage.removeItem(this.USER_DATA_KEY);
